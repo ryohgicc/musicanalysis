@@ -40,6 +40,48 @@ dialog{border:1px solid #ddd;border-radius:24px;background:#fafbf6;color:var(--i
 
 .proof-thumb{width:42px;height:42px;flex:none;display:block;border-radius:6px;overflow:hidden;background:#e5e9df}.proof-thumb img,.proof-thumb .missing-art{width:100%;height:100%;object-fit:cover;display:block}.proof-thumb .missing-art{font-size:16px}.proof-top{align-items:center}.dialog-body .proof-thumb{width:38px;height:38px}.stage-track .proof-thumb{width:36px;height:36px}.stage-track .proof-thumb img{width:100%;height:100%;object-fit:cover}
 .rec-art{width:54px;height:54px;flex:none;border-radius:9px;overflow:hidden;background:#eceee8}.rec-art img{display:block;width:100%;height:100%;object-fit:cover}.rec-detail-art{display:flex;align-items:center;gap:22px;margin:22px 0 28px}.rec-detail-art>img{display:block;width:118px;height:118px;object-fit:cover;border-radius:12px;flex:none}.dialog-body .rec-detail-art h2{margin-bottom:10px}.art-source{margin-top:20px}@media(max-width:760px){.rec-art{width:46px;height:46px}.rec-detail-art{gap:15px}.rec-detail-art>img{width:80px;height:80px}.dialog-body .rec-detail-art h2{font-size:20px}}
+
+/* Spread each desktop stage over the viewport, with reading space between the three blocks. */
+@media(min-width:761px){
+ .era{padding-top:calc(var(--nav) + 40px);padding-bottom:40px}
+ .era .panel-inner{min-height:calc(100svh - var(--nav) - 80px)}
+ .era .split{min-height:inherit;align-items:stretch;gap:6vw}
+ .era-copy{display:flex;flex-direction:column;min-height:inherit}
+ .era .display{font-size:clamp(42px,3.7vw,68px);line-height:1.22}
+ .era .lead{font-size:16px;max-width:560px;margin-top:26px}
+ .era .range{font-size:12px;margin-top:24px}
+ .era .stage-story{flex:1;display:flex;flex-direction:column;justify-content:center;gap:clamp(30px,4vh,48px);max-width:580px;margin-top:32px;padding-bottom:24px}
+ .era .stage-story h3{font-size:12px;margin:0 0 12px}
+ .era .stage-story p{font-size:16px;line-height:2}
+ .era-copy>.small{font-size:11px;margin:0;line-height:1.8}
+ .era .stage-art{display:flex;flex-direction:column;justify-content:space-between;padding-top:22px;min-height:inherit;gap:32px}
+ .era .stage-art .record{max-width:clamp(310px,38vh,450px);width:100%;flex:none;margin-left:auto}
+ .era .stage-evidence{margin:0 0 0 20px}
+ .era .stage-evidence .proof-label{font-size:11px;margin-bottom:18px}
+ .era .stage-track{padding:19px 0;gap:18px}
+ .era .stage-track>span{font-size:11px;min-width:38px}
+ .era .stage-track h3{font-size:16px;line-height:1.7}
+ .era .stage-track p{font-size:12px;margin-top:6px}
+}
+@media(min-width:761px) and (max-height:800px){
+ .era{padding-top:calc(var(--nav) + 28px);padding-bottom:28px}
+ .era .panel-inner{min-height:calc(100svh - var(--nav) - 56px)}
+ .era .display{font-size:42px}
+ .era .lead{font-size:13px;margin-top:18px}
+ .era .range{font-size:10px;margin-top:18px}
+ .era .stage-story{margin-top:24px;gap:24px;padding-bottom:20px}
+ .era .stage-story p{font-size:13px;line-height:1.95}
+ .era .stage-story h3{font-size:11px;margin-bottom:10px}
+ .era .stage-art{padding-top:10px;gap:24px}
+ .era .stage-art .record{max-width:280px}
+ .era .stage-track{padding:12px 0}
+ .era .stage-track h3{font-size:14px}
+ .era .stage-track p{font-size:10px}
+ .era-copy>.small{font-size:9px}
+}
+@media(max-width:760px){.stage-story article+article{margin-top:22px}.stage-story article h3{margin-top:0}.stage-story article:first-child h3{margin-top:22px}}
+@media print{.era .panel-inner,.era .split,.era-copy,.era .stage-art{min-height:0!important}}
+
 </style></head><body>
 <a class="skip" href="#journey">跳到收藏旅程</a>
 <header class="topbar"><a class="brand" href="#home" aria-label="声迹 首页"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M4 14v4M10 8v16M16 3v26M22 8v16M28 14v4"/></svg>声迹<span class="research-mark">SCROLL STUDY / 01</span></a><nav class="topnav" aria-label="报告导航"><a href="#journey" data-group="journey">旅程</a><a href="#preferences" data-group="preferences">偏好</a><a href="#discover" data-group="discover">发现</a><a href="#library" data-group="library">曲库</a></nav><button class="mode" id="mode" aria-pressed="false">阅读模式</button><button class="menu-trigger" id="menu-trigger" aria-label="打开报告目录" aria-expanded="false">☰</button></header>
@@ -67,7 +109,7 @@ panel('home','从喜欢开始','home','home',`<div class="split"><div class="kin
 const cols=64;
 const dots=D.playlist.tracks.slice().reverse().map((t,i)=>{const st=D.stages.findIndex(s=>t.index<=s.start&&t.index>=s.end);return `<rect x="${i%cols*14}" y="${Math.floor(i/cols)*12}" width="8" height="6" rx="2" fill="${D.stages[st].color}" data-stage="${st}" opacity=".86"><title>#${t.index} ${esc(t.title)}</title></rect>`;}).join('');
 panel('journey','799 首，一条轨迹','journey','map-panel',`<div class="kinetic" data-kinetic="copy"><p class="kicker">01 / THE JOURNEY</p><div class="map-head"><span class="large-number mono">799<span class="sr-only">首歌曲</span></span><div class="map-title"><h2 class="display">风格，是慢慢<br>长出来的。</h2><p class="lead">旋律、节奏、语言与声线。<br>新的偏好加入，熟悉的声音仍然留下。</p></div></div><svg class="dot-map" viewBox="0 0 896 156" role="img" aria-label="799 首收藏由较早到较新，颜色区分九个解释性阶段">${dots}</svg><div class="map-meta"><span>#799 较早</span><span>每一点，对应一首收藏</span><span>#1 较新</span></div><nav class="phase-links" aria-label="九个阶段">${D.stages.map((s,i)=>`<a href="#era-${i+1}" style="--swatch:${s.color}"><b class="mono">${num(i+1)}</b>${esc(s.tag)}</a>`).join('')}</nav></div>`);
-D.stages.forEach((s,i)=>panel('era-'+(i+1),s.tag,'journey','era',`<div class="split"><div><span class="era-number mono" aria-hidden="true">${num(i+1)}</span><p class="kicker">CHAPTER ${num(i+1)} / 09 · ${esc(s.tag)}</p><h2 class="display">${esc(s.title).replace('，','，<br>')}</h2><p class="lead">${esc(s.sub)}</p><p class="range mono">#${s.start} → #${s.end} · ${s.start-s.end+1} 首收藏</p><div class="stage-story"><h3>这一段的故事</h3><p>${esc(s.body)}</p><h3>这一段留下了什么</h3><p>${esc(s.insight)}</p></div><p class="small">依据收藏顺序重建 · 不对应确切年份</p></div><div class="stage-art">${record(s.cover,s.tag,i+1)}<div class="stage-evidence"><p class="proof-label">这一段的声音线索</p>${s.ids.map(id=>{const t=songMap.get(id);return `<article class="stage-track"><span class="mono">#${id}</span><div><h3>${songLink(id)}</h3><p>${esc(t.artist)}</p></div></article>`;}).join('')}</div></div></div>`,`--bg:${backgrounds[i]};--accent:${s.color}`));
+D.stages.forEach((s,i)=>panel('era-'+(i+1),s.tag,'journey','era',`<div class="split"><div class="era-copy"><div class="stage-heading"><span class="era-number mono" aria-hidden="true">${num(i+1)}</span><p class="kicker">CHAPTER ${num(i+1)} / 09 · ${esc(s.tag)}</p><h2 class="display">${esc(s.title).replace('，','，<br>')}</h2><p class="lead">${esc(s.sub)}</p><p class="range mono">#${s.start} → #${s.end} · ${s.start-s.end+1} 首收藏</p></div><div class="stage-story"><article><h3>这一段的故事</h3><p>${esc(s.body)}</p></article><article><h3>这一段留下了什么</h3><p>${esc(s.insight)}</p></article></div><p class="small">依据收藏顺序重建 · 不对应确切年份</p></div><div class="stage-art">${record(s.cover,s.tag,i+1)}<div class="stage-evidence"><p class="proof-label">这一段的声音线索</p>${s.ids.map(id=>{const t=songMap.get(id);return `<article class="stage-track"><span class="mono">#${id}</span><div><h3>${songLink(id)}</h3><p>${esc(t.artist)}</p></div></article>`;}).join('')}</div></div></div>`,`--bg:${backgrounds[i]};--accent:${s.color}`));
 panel('preferences','六条偏好线索','preferences','overview',`<div class="split"><div class="kinetic" data-kinetic="copy"><p class="kicker">02 / YOUR MUSICAL DNA</p><h2 class="display">旋律是底色。<br>喜欢，还不止于此。</h2><p class="lead">语言在变，编曲在变。<br>有些声音，却一直把你留住。</p><div class="actions">${button('#preference-melody','从第一条线索开始')}</div></div><nav class="thread-grid" aria-label="六条偏好">${D.insights.map(ins=>`<a class="thread-card" href="#preference-${ins.id}"><span class="thread-no mono">${ins.no} / ${esc(ins.kicker)}</span><h3>${esc(ins.title)}</h3></a>`).join('')}</nav></div>`,`--bg:#f4f5ed`);
 panel('statistics','反复出现的名字','preferences','statistics',`<div class="split"><div class="kinetic" data-kinetic="copy"><p class="kicker">READING THE COLLECTION</p><h2 class="display">有些名字，<br>一再出现。</h2><p class="lead">收藏数量是一条线索。<br>同曲版本、整专加入与合作参与，<br>也会改变这些数字的含义。</p><div class="actions"><button class="text-button" data-detail="stats">这些数量，怎样读？ ＋</button></div></div><div><div class="segmented" role="group" aria-label="统计口径"><button data-count="raw" aria-pressed="true">原始条目</button><button data-count="family" aria-pressed="false">疑似版本合并</button></div><div class="bar-chart" id="artist-bars" role="img" aria-label="艺人参与条目前十"></div><p class="stats-foot">艺人计数包含合作，不能相加作为风格比例。<br>收藏条目不等于播放次数，版本合并是启发式判断。</p></div></div>`,`--bg:#f1f4e9`);
 D.insights.forEach(ins=>panel('preference-'+ins.id,ins.title,'preferences','insight',`<div class="split"><div class="kinetic" data-kinetic="copy"><p class="kicker">${ins.no} / ${esc(ins.kicker)}</p><h2 class="display">${esc(ins.title).replace('，','，<br>')}</h2><p class="lead">${esc(ins.summary)}</p><p class="insight-body">${esc(ins.body)}</p><div class="actions"><button class="text-button" data-detail="insight:${ins.id}">完整解读与试听方向 ＋</button></div></div><div class="proof-stack"><p class="proof-label">COLLECTION EVIDENCE / 你的收藏证据</p>${ins.evidence.map((e,j)=>{const t=songMap.get(e.index);return `<article class="proof-row" style="--row:${j}"><div class="proof-top"><span class="proof-thumb">${cover(e.index)}</span><span class="mono">#${e.index}</span><h3>${songLink(e.index)}</h3><small>${esc(t.artist)}</small></div><p>${esc(e.note)}</p></article>`;}).join('')}<p class="listen-note">听感联系是待验证的解释，可根据试听反馈继续修正。</p></div></div>`,`--bg:#f2f4eb`));

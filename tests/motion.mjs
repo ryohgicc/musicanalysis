@@ -55,6 +55,21 @@ try{
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     }
   }
+  for(const viewport of [{width:1920,height:1080},{width:1440,height:960},{width:1280,height:720}]){
+    await page.setViewportSize(viewport);await page.waitForTimeout(100);
+    for(let i=2;i<=10;i++){
+      await page.evaluate(i=>scrollTo(0,scrollStudy.starts[i]),i);
+      await page.waitForFunction(i=>scrollStudy.current===i,i);
+      const layout=await page.locator('.panel').nth(i).evaluate(el=>{
+        const rect=selector=>el.querySelector(selector).getBoundingClientRect();
+        const css=getComputedStyle(el),available=innerHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom);
+        return {available,content:rect('.panel-inner').height,copy:rect('.era-copy').height,art:rect('.stage-art').height,evidenceBottom:rect('.stage-evidence').bottom};
+      });
+      assert.ok(layout.content>=layout.available*.95,`Stage ${i} must use the desktop height`);
+      assert.ok(layout.copy>=layout.available*.95&&layout.art>=layout.available*.95);
+      assert.ok(layout.evidenceBottom>=viewport.height*.85,`Stage ${i} evidence must extend down the page`);
+    }
+  }
   await page.setViewportSize({width:1440,height:960});await page.waitForTimeout(100);
   await go(14);await page.locator('#preference-groove [data-detail]').click();
   assert.equal(await page.locator('dialog .proof-thumb img').count(),3);
