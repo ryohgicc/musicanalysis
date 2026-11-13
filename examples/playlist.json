@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "name": "虚构流程示例",
+  "id": "demo",
+  "sourceUrl": "",
+  "exportedAt": "2026-01-01T00:00:00+00:00",
+  "trackCount": 6,
+  "tracks": [
+    {
+      "index": 1,
+      "title": "Alpha (Live)",
+      "artists": [
+        "A"
+      ],
+      "artist": "A",
+      "album": "Live",
+      "durationSeconds": 0,
+      "songId": "",
+      "songMid": "mid1",
+      "sourceUrl": "",
+      "coverUrl": ""
+    },
+    {
+      "index": 2,
+      "title": "Alpha",
+      "artists": [
+        "A"
+      ],
+      "artist": "A",
+      "album": "Studio",
+      "durationSeconds": 0,
+      "songId": "",
+      "songMid": "mid2",
+      "sourceUrl": "",
+      "coverUrl": ""
+    },
+    {
+      "index": 3,
+      "title": "Duet",
+      "artists": [
+        "A",
+        "B"
+      ],
+      "artist": "A、B",
+      "album": "Duets",
+      "durationSeconds": 0,
+      "songId": "",
+      "songMid": "mid3",
+      "sourceUrl": "",
+      "coverUrl": ""
+    },
+    {
+      "index": 4,
+      "title": "Flow",
+      "artists": [
+        "C"
+      ],
+      "artist": "C",
+      "album": "One",
+      "durationSeconds": 0,
+      "songId": "",
+      "songMid": "mid4",
+      "sourceUrl": "",
+      "coverUrl": ""
+    },
+    {
+      "index": 5,
+      "title": "Bridge",
+      "artists": [
+        "リリィ、さよなら。"
+      ],
+      "artist": "リリィ、さよなら。",
+      "album": "Two",
+      "durationSeconds": 0,
+      "songId": "",
+      "songMid": "mid5",
+      "sourceUrl": "",
+      "coverUrl": ""
+    },
+    {
+      "index": 6,
+      "title": "Origin",
+      "artists": [
+        "B"
+      ],
+      "artist": "B",
+      "album": "Three",
+      "durationSeconds": 0,
+      "songId": "",
+      "songMid": "mid6",
+      "sourceUrl": "",
+      "coverUrl": ""
+    }
+  ]
+}

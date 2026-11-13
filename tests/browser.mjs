@@ -1,0 +1,27 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const url=file=>pathToFileURL(path.join(root,'.test-output',file)).href;
+const browser=await chromium.launch({headless:true});const context=await browser.newContext({viewport:{width:1440,height:900},acceptDownloads:true});
+const page=await context.newPage();let errors=[],requests=[];
+page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
+await page.emulateMedia({reducedMotion:'reduce'});await page.goto(url('report.html'));
+assert.equal(await page.locator('#track-map rect').count(),18);assert.equal(await page.locator('.era').count(),3);
+for(const i of [1,2,3,1]){await page.locator(`#era-${i}`).evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));await page.waitForFunction(n=>document.querySelector('.era-link[aria-current="step"]').dataset.era===String(n-1),i);assert.ok(Math.abs((await page.locator('.journey-nav').boundingBox()).y)<2);}
+await page.locator('.era-link').last().click();assert.equal(await page.evaluate(()=>location.hash),'#era-3');
+await page.locator('.era-link').last().press('ArrowLeft');assert.equal(await page.evaluate(()=>location.hash),'#era-2');
+await page.locator('.taste-preview').first().click();assert.equal(await page.evaluate(()=>location.hash),'#insight-1');
+const before=await page.locator('.bar-value').allTextContents();await page.locator('[data-count-mode="family"]').click();const after=await page.locator('.bar-value').allTextContents();assert.notDeepEqual(before,after);
+await page.locator('[data-tier="相邻风格"]').click();assert.equal(await page.locator('.rec-card').count(),0);await page.locator('[data-tier="全部"]').click();
+await page.getByRole('button',{name:'喜欢：Test Recommendation',exact:true}).click();await page.reload();assert.equal(await page.getByRole('button',{name:'喜欢：Test Recommendation',exact:true}).getAttribute('aria-pressed'),'true');
+const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#export-feedback').click()]);const downloadPath=path.join(root,'.test-output/feedback.json');await download.saveAs(downloadPath);assert.equal(JSON.parse(await fs.readFile(downloadPath,'utf8')).recommendations[0].feedback,'喜欢');
+assert.equal(await page.locator('#library-rows tr').count(),12);await page.locator('#page-next').click();assert.equal(await page.locator('#library-rows tr').count(),6);
+await page.locator('#library-search').fill('Synthetic 18');assert.equal(await page.locator('#library-rows tr').count(),1);await page.locator('#library-search').fill('no-matching-test');assert.match(await page.locator('#library-rows').innerText(),/没有匹配/);await page.locator('#library-search').fill('');await page.locator('#library-order').selectOption('reverse');assert.equal(await page.locator('#library-rows td').first().innerText(),'18');
+for(const v of [{width:1024,height:768},{width:390,height:844},{width:320,height:740}]){await page.setViewportSize(v);await page.locator('#era-3').evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));await page.waitForFunction(()=>document.querySelector('.era-link[aria-current="step"]').dataset.era==='2');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const rect=await page.locator('.era-link').last().boundingBox();assert.ok(rect.x>=0&&rect.x+rect.width<=v.width);}
+await page.setViewportSize({width:1440,height:900});await page.goto(url('unknown.html'));assert.equal(await page.locator('#journey').isVisible(),false);assert.equal(await page.locator('.era').count(),0);
+await page.goto(url('first.html'));assert.match(await page.locator('#era-1 .era-meta').innerText(),/1—6/);
+await page.goto(url('hostile.html'));assert.equal(await page.evaluate(()=>window.pwned),undefined);assert.match(await page.locator('#report-title').innerText(),/onerror/);assert.equal(await page.locator('a[href^="javascript:"]').count(),0);
+assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);console.log('Browser passed: 3 chronology modes, sticky scrolling, jumps, chart, recommendations, persisted/exported feedback, library search/sort/pagination, 4 viewports, hostile strings and offline loading.');await browser.close();

@@ -1,0 +1,4 @@
+interface:
+  display_name: "音乐歌单分析与网页报告"
+  short_description: "从分享链接解析完整歌单，分析偏好、收藏变化与推荐，生成可离线阅读的交互网页"
+  default_prompt: "用 $music-analysis 从我的歌单链接生成有曲目证据的偏好分析、推荐与交互网页报告。"
