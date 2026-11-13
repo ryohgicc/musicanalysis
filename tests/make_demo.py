@@ -11,4 +11,4 @@ r['stages'][0]['body']='此处使用虚构歌名与艺人，只演示解析、�
 r['stages'][1]['body']='阶段依次覆盖完整输入，滚动时目录自动更新。本示例为末首较早，不对应实际年份。'
 r['insights'][0]['direction']='真实使用时补充可验证的听感解释与试听方向。'
 save_json(root/'examples/playlist.json',p);save_json(root/'examples/analysis.json',r)
-(root/'examples/report.html').write_text(render(p,r,{str(t['index']):data_url(synthetic_png(t['index'])) for t in p['tracks']}),encoding='utf-8');print('Generated fictional demo.')
+(root/'examples/report.html').write_text(render(p,r,{str(t['index']):data_url(synthetic_png(t['index'])) for t in p['tracks']},preview=True),encoding='utf-8');print('Generated fictional demo.')

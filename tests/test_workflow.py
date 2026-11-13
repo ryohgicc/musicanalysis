@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'skills/music-analysis/scripts'))
+from content_contract import validate_complete
 from workflow import normalize, playlist_id, snapshot_hash, validate_analysis, render, export_files
 from analyze_playlist import analyze, credits
 
@@ -22,6 +23,14 @@ def fixture():
         stages=[dict(range=[4,6], tag='起点', title='较早收藏', body='虚构阶段说明', insight='示例', anchorIds=[6,5]),
                 dict(range=[1,3], tag='延伸', title='较新收藏', body='虚构阶段说明', insight='示例', anchorIds=[3,1])],
         insights=[dict(title='示例线索', summary='这里是示例，不是听感推断。', body='真实报告应解释具体作品。', evidence=[dict(index=6,note='示例证据'),dict(index=1,note='示例证据')])], recommendations=[])
+    return p,r
+
+def complete_fixture():
+    p=normalize({'name':'Synthetic full report','tracks':[dict(title=f'Track {i}',artists=['Artist'],songMid=f'mid{i}') for i in range(1,28)]})
+    r=dict(status='ready',playlistHash=snapshot_hash(p),title='虚构完整报告',summary='原创合成数据，只验证布局与校验。',order='unknown',chapterMode='source-order',heroAnchorIds=[1,3,5,6],
+        stages=[dict(range=[i,i+2],tag='内容分段',title='相邻曲目的连接',subtitle='按原序阅读，不对应收藏时间。',body='合成曲目用于验证完整报告。',insight='具体作品支持的联系。',anchorIds=[i,i+1,i+2]) for i in range(1,28,3)],
+        insights=[dict(title=f'线索 {i}',kicker='MELODY',summary='合成例子。',body='具体曲目支持一条可验证联系。',direction='对比试听。',question='什么声音留下了印象？',evidence=[dict(index=j,note='合成证据。') for j in [1,2,3]],recommendationIds=[i]) for i in range(6)],
+        recommendations=[dict(title=f'Candidate {i}',artist='New artist',tier='大概率合口味' if i<6 else '相邻风格' if i<10 else '探索',anchorIds=[1,2],reason='与收藏有具体连接。',difference='用于比较差异。',source='https://example.org/verified-fixture') for i in range(12)])
     return p,r
 
 class WorkflowTest(unittest.TestCase):
@@ -80,7 +89,19 @@ class WorkflowTest(unittest.TestCase):
             (copied/'report-template.json').write_text(json.dumps(dict(
                 id='shengji',version='test',sha256=hashlib.sha256(original).hexdigest())))
             with patch('workflow.HERE',Path(tmp)/'scripts'),self.assertRaisesRegex(ValueError,'template.*changed'):
-                render(p,r)
+                render(p,r,preview=True)
+
+    def test_complete_contract_and_source_order(self):
+        import copy
+        p,r=complete_fixture();validate_analysis(p,r);validate_complete(r)
+        self.assertIn('source-order',render(p,r))
+        for field,value in [('stages',[]),('insights',r['insights'][:4]),('recommendations',r['recommendations'][:8]),('title','很长的标题'*8),('summary','过长的摘要'*30)]:
+            changed=copy.deepcopy(r);changed[field]=value
+            with self.assertRaisesRegex(ValueError,'Incomplete report'):validate_complete(changed)
+        r['insights'][0]['direction']=''
+        with self.assertRaisesRegex(ValueError,'direction'):validate_complete(r)
+        r['order']='first-oldest'
+        with self.assertRaisesRegex(ValueError,'do not assert'):validate_analysis(p,r)
 
     def test_exports_and_untrusted_metadata(self):
         p,r=fixture();p['tracks'][0]['title']='=SUM(1,2)'
@@ -88,6 +109,6 @@ class WorkflowTest(unittest.TestCase):
             export_files(p,d);self.assertEqual(json.loads((Path(d)/'playlist.json').read_text())['tracks'][0]['title'],'=SUM(1,2)')
             with (Path(d)/'playlist.csv').open(encoding='utf-8-sig',newline='') as f:self.assertEqual(list(csv.reader(f))[1][1],"'=SUM(1,2)")
         p,r=fixture();r['title']='</script><script>alert(1)</script>'
-        self.assertNotIn('</script><script>alert(1)</script>',render(p,r))
-        with self.assertRaises(ValueError):render(p,r,{'6':'data:image/svg+xml;base64,AAAA'})
+        self.assertNotIn('</script><script>alert(1)</script>',render(p,r,preview=True))
+        with self.assertRaises(ValueError):render(p,r,{'6':'data:image/svg+xml;base64,AAAA'},preview=True)
 if __name__=='__main__':unittest.main()

@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-from test_workflow import fixture
+from test_workflow import fixture, complete_fixture
 from workflow import main, save_json
 from covers import collect_covers, selected_indices
 
@@ -17,7 +17,7 @@ PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42m
 
 class VisualPipelineTest(unittest.TestCase):
     def test_default_render_embeds_available_covers(self):
-        playlist,report=fixture()
+        playlist,report=complete_fixture()
         for track in playlist['tracks']:
             track['coverUrl']='https://y.gtimg.cn/music/photo_new/test-cover.png'
         with tempfile.TemporaryDirectory() as tmp:
@@ -30,6 +30,16 @@ class VisualPipelineTest(unittest.TestCase):
             self.assertTrue(data['covers'],'Default render dropped all album images; it requires an undocumented manual --covers step.')
             for index in (1,3,5,6):self.assertIn(str(index),data['covers'])
             self.assertTrue(all(x.startswith('data:image/png;base64,') for x in data['covers'].values()))
+
+    def test_default_cli_rejects_incomplete_content_before_network(self):
+        playlist,report=fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);save_json(folder/'playlist.json',playlist);save_json(folder/'analysis.json',report)
+            args=['workflow.py','render',str(folder/'playlist.json'),str(folder/'analysis.json'),'--output',str(folder/'report.html')]
+            with patch('sys.argv',args),patch('workflow.collect_covers') as fetch,contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
+                main()
+            fetch.assert_not_called()
+            self.assertFalse((folder/'report.html').exists())
 
     def test_mid_lookup_and_offline_cache(self):
         playlist,report=fixture()
@@ -73,7 +83,7 @@ class VisualPipelineTest(unittest.TestCase):
         playlist,report=fixture()
         with tempfile.TemporaryDirectory() as tmp:
             folder=Path(tmp);save_json(folder/'playlist.json',playlist);save_json(folder/'analysis.json',report)
-            args=['workflow.py','render',str(folder/'playlist.json'),str(folder/'analysis.json'),'--output',str(folder/'report.html'),'--offline','--require-covers']
+            args=['workflow.py','render',str(folder/'playlist.json'),str(folder/'analysis.json'),'--output',str(folder/'report.html'),'--offline','--require-covers','--preview']
             with patch('sys.argv',args),contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit) as error:
                 main()
             self.assertEqual(error.exception.code,1)

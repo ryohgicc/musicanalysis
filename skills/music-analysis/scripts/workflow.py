@@ -16,6 +16,7 @@ import urllib.request
 
 from analyze_playlist import analyze, credits, pick
 from covers import collect_covers, hero_indices, tls_context
+from content_contract import validate_complete
 
 HERE = Path(__file__).resolve().parent
 
@@ -162,7 +163,12 @@ def validate_analysis(playlist, report):
     if order not in ('first-oldest', 'last-oldest', 'unknown'):
         raise ValueError('order must be first-oldest, last-oldest, or unknown.')
     chapters = report.get('stages', [])
-    if order == 'unknown' and chapters:
+    chapter_mode = report.get('chapterMode', 'chronological')
+    if chapter_mode not in ('chronological', 'source-order'):
+        raise ValueError('chapterMode must be chronological or source-order.')
+    if chapter_mode == 'source-order' and order != 'unknown':
+        raise ValueError('source-order chapters use order unknown and do not assert listening chronology.')
+    if order == 'unknown' and chapters and chapter_mode != 'source-order':
         raise ValueError('Unknown collection order: omit chronological chapters and analyze static preferences.')
     if chapters:
         covered = []
@@ -170,13 +176,13 @@ def validate_analysis(playlist, report):
             lo, hi = stage['range']
             if not (1 <= lo <= hi <= n):
                 raise ValueError('Invalid chapter range.')
-            covered.extend(range(lo, hi + 1) if order == 'first-oldest' else range(hi, lo - 1, -1))
+            covered.extend(range(lo, hi + 1) if order != 'last-oldest' else range(hi, lo - 1, -1))
             for key in ('title', 'body', 'insight'):
                 if not stage.get(key):
                     raise ValueError(f'Chapter needs {key}.')
             if not stage.get('anchorIds'):
                 raise ValueError('Every chapter needs collection evidence.')
-        expected = list(range(1, n + 1)) if order == 'first-oldest' else list(range(n, 0, -1))
+        expected = list(range(n, 0, -1)) if order == 'last-oldest' else list(range(1, n + 1))
         if covered != expected:
             raise ValueError('Chapters must cover every track exactly once in confirmed chronological order.')
     insights = report.get('insights', [])
@@ -237,8 +243,10 @@ def export_files(playlist, out):
             w.writerow(["'" + x if isinstance(x, str) and x.startswith(('=', '+', '-', '@', '\t', '\r')) else x for x in values])
 
 
-def render(playlist, report, covers=None):
+def render(playlist, report, covers=None, *, preview=False):
     stats = validate_analysis(playlist, report)
+    if not preview:
+        validate_complete(report)
     embedded = {}
     for index, value in (covers or {}).items():
         if not str(index).isdigit() or not 1 <= int(index) <= playlist['trackCount']:
@@ -254,7 +262,7 @@ def render(playlist, report, covers=None):
         raise ValueError('Report template has changed. Restore the released template; new playlists replace data only.')
     bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded,
                   heroIndices=hero_indices(playlist, report), templateId=identity['id'],
-                  templateVersion=identity['version'], templateHash=digest)
+                  templateVersion=identity['version'], templateHash=digest, preview=preview)
     payload = json.dumps(bundle, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
     return template.replace('__DOCUMENT_TITLE__', html.escape(report['title'])).replace('/*__REPORT_DATA__*/', payload)
 
@@ -272,6 +280,7 @@ def main():
     init = sub.add_parser('init-analysis'); init.add_argument('input', type=Path); init.add_argument('--output', type=Path, required=True)
     for command in ('validate', 'render'):
         p = sub.add_parser(command); p.add_argument('playlist', type=Path); p.add_argument('analysis', type=Path)
+        p.add_argument('--preview', action='store_true', help='Allow incomplete content; output is visibly marked as a preview.')
         if command == 'render':
             p.add_argument('--output', type=Path, required=True); p.add_argument('--covers', type=Path)
             p.add_argument('--offline', action='store_true', help='Use only supplied / cached artwork; no network.')
@@ -316,20 +325,23 @@ def main():
         else:
             playlist = normalize(read_json(args.playlist)); report = read_json(args.analysis)
             if args.command == 'validate':
-                validate_analysis(playlist, report); print('Analysis evidence and chronology are valid.')
+                validate_analysis(playlist, report)
+                if not args.preview:
+                    validate_complete(report)
+                print('Analysis evidence, ordering and content are valid.' if not args.preview else 'Preview data are valid; completeness not checked.')
             else:
                 safe_output(args.output, args.playlist, args.analysis, args.covers)
                 supplied = read_json(args.covers) if args.covers else None
                 # Validate before network access. User metadata cannot trigger rendering of an invalid report.
-                render(playlist, report, supplied)
+                render(playlist, report, supplied, preview=args.preview)
                 covers, failures = collect_covers(playlist, report,
                     args.cover_cache or args.output.parent / '.music-analysis-covers', supplied, args.offline)
                 required = {s.get('coverIndex') or s['anchorIds'][0] for s in report.get('stages', [])}
                 required.update(hero_indices(playlist, report))
                 missing = sorted(i for i in required if str(i) not in covers)
-                if args.require_covers and missing:
+                if (args.require_covers or not args.preview) and missing:
                     raise ValueError(f'Representative artwork unavailable at indices {missing}. Check metadata/network or supply --covers.')
-                page = render(playlist, report, covers)
+                page = render(playlist, report, covers, preview=args.preview)
                 print(f'Artwork: {len(covers)} embedded, {len(failures)} unavailable.', file=sys.stderr)
                 if failures:
                     print('Artwork fallback: ' + '; '.join(f"#{f['index']} {f['reason']}" for f in failures[:5]), file=sys.stderr)

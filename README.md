@@ -36,6 +36,12 @@ cp -R musicanalysis/skills/music-analysis ~/.codex/skills/
 
 短链没有 ID 时先在浏览器展开。不要把分享页前几首预览当完整歌单。
 
+## 完整报告要求
+
+固定模板还需要固定内容契约：九个全屏章节、六条完整偏好、十二首推荐（6 / 4 / 2），首页标题最多 18 字符、摘要最多 60 字符。每个章节与偏好均有三首不同曲目证据。`validate` 和 `render` 默认检查这些条件，缺项即停止。见 [完整内容契约](skills/music-analysis/references/report-contract.md)。
+
+收藏方向未知时可以按原歌单顺序做内容分段，使用 `chapterMode: source-order, order: unknown`，明确不代表时间演变。不能为了生成章节假设收藏方向。证据不足的歌单使用 `--preview`，页面明确显示“预览 · 内容未完成”；短歌单不强凑分析。
+
 ## 命令行工作流
 
 从仓库根目录运行：
@@ -46,16 +52,16 @@ python3 skills/music-analysis/scripts/workflow.py stats work/snapshot/playlist.j
 python3 skills/music-analysis/scripts/workflow.py init-analysis work/snapshot/playlist.json --output work/analysis.json
 ```
 
-然后由 agent 结合统计与具体作品，填写 `work/analysis.json` 的偏好证据、阶段和已核实推荐；[JSON 契约](skills/music-analysis/references/analysis.md) 提供字段解释。草稿默认 `status: draft`，完成分析后才设为 `ready`。没有确认收藏顺序时保留 `order: unknown`，变化板块保留“待确认”状态，不编造时间演变。
+然后由 agent 结合统计与具体作品，填写 `work/analysis.json` 的偏好证据、阶段和已核实推荐；[JSON 契约](skills/music-analysis/references/analysis.md) 提供字段解释。草稿默认 `status: draft`，完成分析后才设为 `ready`。没有确认收藏顺序时保留 `order: unknown`；需要先交付内容结构完整的页面时，按上述 source-order 模式做内容分段，不编造时间演变。
 
 ```bash
 python3 skills/music-analysis/scripts/workflow.py validate work/snapshot/playlist.json work/analysis.json
-python3 skills/music-analysis/scripts/workflow.py render work/snapshot/playlist.json work/analysis.json --output outputs/report.html
+python3 skills/music-analysis/scripts/workflow.py render work/snapshot/playlist.json work/analysis.json --output outputs/report.html --require-covers
 ```
 
 双击 `outputs/report.html` 即可阅读。默认 `render` 会自动获取首页、阶段和证据卡用到的 QQ 专辑封面，缓存后内嵌到 HTML；缺少封面 URL 时会通过歌曲 MID 查询专辑。生成时需要联网，生成后的数据、封面、CSS 与 JS 均可离线阅读；外部作品链接需联网。
 
-封面缓存默认位于输出文件旁的 `.music-analysis-covers/`，可用 `--cover-cache <目录>` 指定。`--offline` 只使用缓存或显式提供的 `--covers covers.json`；`--require-covers` 在首页或阶段代表封面缺失时终止生成，适合检查可复现效果。无法取得的封面会在终端列出并显示几何占位，不会伪造专辑图片。默认最多获取 96 个代表与证据条目的封面，不下载全歌单图片。
+封面缓存默认位于输出文件旁的 `.music-analysis-covers/`，可用 `--cover-cache <目录>` 指定。`--offline` 只使用缓存或显式提供的 `--covers covers.json`；`--require-covers` 在首页或阶段代表封面缺失时终止生成，适合检查可复现效果。正式报告默认也要求首页和阶段代表封面齐全；缺失会停止。次要证据封面或预览中无法取得的图片会列出并显示几何占位，不会伪造专辑图片。默认最多获取 96 个代表与证据条目的封面，不下载全歌单图片。
 
 更新仓库后，也要把新版 `skills/music-analysis/` 同步到实际使用的 skill 目录并重新加载；仅 `git pull` 不会更新之前复制安装的 skill。
 
@@ -71,7 +77,7 @@ python3 skills/music-analysis/scripts/workflow.py normalize '<已有导出.json�
 
 - 封面拼贴首页、唱片式阶段配图、保留编号的偏好证据卡；使用随仓库发布的完整模板。
 - 固定保留首页、变化、偏好、推荐、曲库和页脚；缺失信息在原板块显示待补充状态。
-- 已确认顺序时：按歌单内容划分的全屏滚动章节、固定目录与当前阶段同步、曲目证据和阶段跳转；不固定阶段数。
+- 已确认顺序时：按歌单内容划分的全屏滚动章节、固定目录与当前阶段同步、曲目证据和阶段跳转；正式报告按定稿填九个有依据的相邻分段。
 - 偏好：总览、详细解释、具体收藏锚点、下一步试听方向。
 - 统计：艺人参与条目、疑似版本合并两种口径，合作计数不当作风格百分比。
 - 推荐：大概率合口味 / 相邻风格 / 探索，具体理由、潜在差异、已核实来源；本地反馈保存与 JSON 导出。
@@ -83,11 +89,11 @@ python3 skills/music-analysis/scripts/workflow.py normalize '<已有导出.json�
 仓库只提交 **6 首虚构曲目** 的示例，不含任何真实用户歌单、昵称或真实专辑封面。预生成示例配有本项目原创的几何示意图：
 
 ```bash
-python3 skills/music-analysis/scripts/workflow.py validate examples/playlist.json examples/analysis.json
-python3 skills/music-analysis/scripts/workflow.py render examples/playlist.json examples/analysis.json --output work/demo.html
+python3 skills/music-analysis/scripts/workflow.py validate examples/playlist.json examples/analysis.json --preview
+python3 skills/music-analysis/scripts/workflow.py render examples/playlist.json examples/analysis.json --output work/demo.html --preview
 ```
 
-可直接打开 [examples/report.html](examples/report.html) 查看带原创示意图的布局；上面的 CLI 示例没有真实 QQ 图片来源，因此会提示缺图并显示占位。`npm run build` 可重建带示意图的示例。示例没有伪造真实音乐推荐；推荐、反馈等交互由测试临时构造的合成候选验证。
+六首虚构示例使用预览模式，不满足完整报告的数量要求。可直接打开 [examples/report.html](examples/report.html) 查看带原创示意图的布局；上面的 CLI 示例没有真实 QQ 图片来源，因此会提示缺图并显示占位。`npm run build` 可重建带示意图的示例。示例没有伪造真实音乐推荐；推荐、反馈等交互由测试临时构造的合成候选验证。
 
 ## 方法与边界
 
