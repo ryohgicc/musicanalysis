@@ -11,12 +11,14 @@ from pathlib import Path
 import re
 import ssl
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
 from analyze_playlist import analyze, credits, pick
 from covers import collect_covers, hero_indices, tls_context
 from content_contract import validate_complete
+from platforms import PLATFORMS, playlist_target, playlist_url, platform_from_url, song_url
 
 HERE = Path(__file__).resolve().parent
 
@@ -39,8 +41,16 @@ def safe_output(path, *inputs):
 def request_json(url):
     # Respect host trust stores / SSL_CERT_FILE; never disable TLS verification.
     req = urllib.request.Request(url, headers={'User-Agent': 'MusicAnalysis/1.0', 'Referer': 'https://y.qq.com/'})
-    with urllib.request.urlopen(req, timeout=30, context=tls_context()) as response:
-        data = response.read(32 * 1024 * 1024 + 1)
+    try:
+        with urllib.request.urlopen(req, timeout=30, context=tls_context()) as response:
+            data = response.read(32 * 1024 * 1024 + 1)
+    except urllib.error.HTTPError as error:
+        try:
+            payload = json.loads(error.read(65536))
+        except (ValueError, OSError):
+            raise ValueError(f'Metadata service returned HTTP {error.code}; use a local complete export.') from None
+        upstream_error(payload)
+        raise ValueError(f'Metadata service returned HTTP {error.code}.') from None
     if len(data) > 32 * 1024 * 1024:
         raise ValueError('Metadata response exceeds 32 MiB.')
     return json.loads(data.decode('utf-8-sig'))
@@ -66,6 +76,29 @@ def playlist_id(value):
     raise ValueError('Link has no playlist ID. Open the shared card in a browser and copy its final URL.')
 
 
+def upstream_error(data):
+    if not isinstance(data, dict):
+        raise ValueError('Invalid upstream response envelope.')
+    if data.get('success') is False or data.get('code', 0) not in (0, '0', None):
+        error = data.get('error') or {}
+        code = error.get('code', '') if isinstance(error, dict) else ''
+        hints = {
+            'AMBIGUOUS_INPUT': 'Specify --platform or provide a full playlist link.',
+            'AUTH_REQUIRED': 'Use Playlist Out to log in locally and export the complete playlist JSON.',
+            'UNSUPPORTED_URL': 'Provide a supported public playlist link or a local export.',
+            'UPSTREAM_ERROR': 'Music platform retrieval failed; use a local complete export.',
+            'RATE_LIMITED': 'Service rate limited this request; use a local complete export.',
+        }
+        label = code if re.fullmatch(r'[A-Z_]{1,60}', str(code)) else 'UPSTREAM_ERROR'
+        raise ValueError(f'Upstream {label}: ' + hints.get(label, 'Check playlist visibility/platform or use a local complete export.'))
+
+
+def check_full(data):
+    retrieval = data.get('retrieval') or {}
+    if data.get('isPartial') or (isinstance(retrieval, dict) and retrieval.get('mode') in ('preview', 'partial')):
+        raise ValueError('Incomplete playlist preview (possibly auth_required). For Kugou, log in via Playlist Out and export full JSON; do not analyze the first 10 tracks as a complete playlist.')
+
+
 def unwrap(data):
     if isinstance(data, list):
         if not data:
@@ -73,16 +106,36 @@ def unwrap(data):
         return {}, data
     if not isinstance(data, dict):
         raise ValueError('Playlist input must be an object or track array.')
-    if data.get('success') is False or data.get('code', 0) not in (0, '0', None):
-        raise ValueError('Upstream returned an error; export public metadata or use a local file.')
+    upstream_error(data)
+    check_full(data)
+    response_meta = data.get('meta') or {}
+    if not isinstance(response_meta, dict):
+        raise ValueError('Invalid upstream response metadata.')
+    parse_info = response_meta.get('parseInfo') or {}
+    if not isinstance(parse_info, dict):
+        raise ValueError('Invalid upstream parse metadata.')
+    if parse_info.get('mode') in ('preview', 'partial'):
+        raise ValueError('Incomplete playlist: upstream marked this response as a preview.')
     data = data.get('data', data)
     if not isinstance(data, dict):
         raise ValueError('Invalid data envelope.')
+    check_full(data)
+    if data.get('kind', 'playlist') != 'playlist':
+        raise ValueError('Expected a single playlist, not a user playlist collection.')
+    envelope_platform = data.get('platform')
     data = data.get('result', data)
+    if not isinstance(data, dict):
+        raise ValueError('Invalid playlist result.')
+    if envelope_platform and data.get('platform', envelope_platform) != envelope_platform:
+        raise ValueError('Upstream platform metadata is inconsistent.')
+    if envelope_platform:
+        data = dict(data, platform=envelope_platform)
     if 'cdlist' in data:
         if len(data['cdlist']) != 1:
             raise ValueError('Expected exactly one playlist; export multiple playlists separately.')
         data = data['cdlist'][0]
+        data = dict(data, platform='qqmusic')
+    check_full(data)
     rows = data.get('tracks', data.get('songlist'))
     if not isinstance(rows, list) or not rows:
         raise ValueError('Expected a nonempty tracks or songlist array.')
@@ -91,17 +144,27 @@ def unwrap(data):
 
 def normalize(data, expected=None):
     meta, rows = unwrap(data)
-    declared = [int(meta[k]) for k in ('trackCount', 'songnum', 'total_song_num') if meta.get(k) is not None]
+    declared = [int(meta[k]) for k in ('trackCount', 'loadedTrackCount', 'songnum', 'total_song_num') if meta.get(k) is not None]
     if expected is not None:
         declared.append(int(expected))
     if any(n != len(rows) for n in declared):
         raise ValueError(f'Incomplete or inconsistent export: received {len(rows)} tracks, declared {declared}. Do not analyze a preview; export the complete playlist.')
+    platform = str(meta.get('platform') or platform_from_url(str(meta.get('sourceUrl', ''))))
+    if not platform:
+        row_platforms = {str(row.get('platform') or platform_from_url(str(pick(row, 'sourceUrl', 'url'))))
+                         for row in rows if isinstance(row, dict)} - {''}
+        if len(row_platforms) == 1:
+            platform = row_platforms.pop()
     tracks = []
     for i, row in enumerate(rows, 1):
         if not isinstance(row, dict):
             raise ValueError(f'Track {i} must be an object.')
         title = str(pick(row, 'title', 'songname', 'name', '歌名', '歌曲', 'Title')).strip()
         artists = credits(row)
+        # Canonical Playlist Out separates artists with comma-space. Generic CSV
+        # artist names remain untouched because a comma can be part of one name.
+        if (meta.get('platform') in PLATFORMS or meta.get('generator') == 'PlaylistOut') and isinstance(row.get('artist'), str) and not row.get('artists'):
+            artists = [a.strip() for a in row['artist'].split(', ') if a.strip()]
         if not title or not artists:
             raise ValueError(f'Track {i} needs title and artists; no entries were skipped.')
         if 'index' in row and int(row['index']) != i:
@@ -113,14 +176,23 @@ def normalize(data, expected=None):
             album = album.get('title', album.get('name', ''))
         mid = str(pick(row, 'songMid', 'songmid', 'mid'))
         # Playlist Out uses id as QQ song MID, but other platforms use different identifiers.
-        if not mid and meta.get('platform') == 'qqmusic':
+        if platform and platform != 'qqmusic':
+            mid = ''  # Other platforms' mid fields are not QQ song MIDs.
+            album_mid = ''
+        if not mid and platform == 'qqmusic':
             mid = str(row.get('id', ''))
         if mid and not re.fullmatch(r'[A-Za-z0-9]+', mid):
             raise ValueError(f'Invalid QQ song MID at track {i}.')
-        source = str(row.get('sourceUrl', ''))
+        track_platform = platform or platform_from_url(str(pick(row, 'sourceUrl', 'url')))
+        song_id = str(pick(row, 'songId', 'songid'))
+        if track_platform and track_platform != 'qqmusic':
+            song_id = song_id or str(row.get('id', ''))
+        source = str(pick(row, 'sourceUrl', 'url'))
         if not source and mid:
             source = 'https://y.qq.com/n/ryqq/songDetail/' + mid
-        seconds = pick(row, 'durationSeconds', 'interval', default=0)
+        if not source:
+            source = song_url(track_platform, song_id)
+        seconds = pick(row, 'durationSeconds', 'interval', 'duration', default=0)
         if not seconds and row.get('durationMs') is not None:
             seconds = float(row['durationMs']) / 1000
         cover = str(row.get('coverUrl', row.get('songCover', '')))
@@ -128,20 +200,46 @@ def normalize(data, expected=None):
             cover = f'https://y.gtimg.cn/music/photo_new/T002R300x300M000{album_mid}.jpg'
         tracks.append(dict(index=i, title=title, artists=artists, artist='、'.join(artists),
                            album=str(album), albumMid=album_mid, durationSeconds=round(float(seconds or 0)),
-                           songId=str(pick(row, 'songId', 'songid')), songMid=mid,
+                           songId=song_id, songMid=mid,
                            sourceUrl=source, coverUrl=cover))
     pid = str(pick(meta, 'id', 'disstid'))
     date = dt.datetime.now(dt.timezone.utc).isoformat()
     return dict(schemaVersion=1, name=str(pick(meta, 'name', 'dissname', default='我的歌单')),
-                id=pid, sourceUrl=str(meta.get('sourceUrl', '')),
+                id=pid, platform=platform, sourceUrl=str(meta.get('sourceUrl') or playlist_url(platform, pid)),
                 exportedAt=meta.get('exportedAt', meta.get('exportedDate', date)),
                 trackCount=len(tracks), tracks=tracks)
+
+
+def fetch_playlist(link, provider='auto', platform='auto', expected=None):
+    platform, query, pid = playlist_target(link, platform)
+    if provider == 'qq' and platform != 'qqmusic':
+        raise ValueError('--provider qq only accepts QQ playlists. Use auto or playlistout.')
+    direct = provider == 'qq' or (provider == 'auto' and platform == 'qqmusic' and pid)
+    if direct:
+        pid = playlist_id(query)
+        url = 'https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg?' + urllib.parse.urlencode(dict(type=1, json=1, utf8=1, onlysong=0, disstid=pid, format='json'))
+    else:
+        url = 'https://playlistout-api.lengxiqwq.com/api/v1/resolve?' + urllib.parse.urlencode(dict(q=query, type='playlist', platform=platform))
+    raw = request_json(url)
+    playlist = normalize(raw, expected)
+    if not direct and (not playlist['platform'] or not playlist['id']):
+        raise ValueError('Resolver response needs playlist platform and ID.')
+    if playlist['platform'] and playlist['platform'] != platform:
+        raise ValueError('Returned playlist platform differs from requested platform.')
+    if pid and playlist['id'] != pid:
+        raise ValueError('Returned playlist ID differs from requested ID.')
+    playlist['platform'] = platform
+    playlist['sourceUrl'] = playlist['sourceUrl'] or query
+    return playlist, raw
 
 
 def snapshot_hash(playlist):
     # Exact ordered evidence snapshot. Cover cache changes do not alter identity.
     evidence = [{k: t.get(k) for k in ('index', 'title', 'artists', 'album', 'songId', 'songMid')}
                 for t in playlist['tracks']]
+    # Preserve existing QQ snapshots while distinguishing non-QQ ID namespaces.
+    if playlist.get('platform') and playlist['platform'] != 'qqmusic':
+        evidence = dict(platform=playlist['platform'], tracks=evidence)
     return hashlib.sha256(json.dumps(evidence, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
@@ -236,9 +334,10 @@ def export_files(playlist, out):
     (out / 'playlist.txt').write_text('\n'.join(f'{t["title"]} - {t["artist"]}' for t in playlist['tracks']) + '\n', encoding='utf-8')
     with (out / 'playlist.csv').open('w', encoding='utf-8-sig', newline='') as f:
         w = csv.writer(f)
-        w.writerow(['index', 'title', 'artist', 'album', 'durationSeconds', 'songMid', 'sourceUrl'])
+        fields = ['index', 'title', 'artist', 'album', 'durationSeconds', 'songMid', 'sourceUrl', 'songId', 'coverUrl']
+        w.writerow(fields)
         for t in playlist['tracks']:
-            values = [t[k] for k in ('index', 'title', 'artist', 'album', 'durationSeconds', 'songMid', 'sourceUrl')]
+            values = [t[k] for k in fields]
             # Spreadsheet-safe CSV; original JSON preserves exact titles.
             w.writerow(["'" + x if isinstance(x, str) and x.startswith(('=', '+', '-', '@', '\t', '\r')) else x for x in values])
 
@@ -270,9 +369,10 @@ def render(playlist, report, covers=None, *, preview=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
-    f = sub.add_parser('fetch', help='Fetch public QQ metadata; never downloads audio.')
+    f = sub.add_parser('fetch', help='Fetch QQ/NetEase/Kugou/Kuwo/Qishui/Migu metadata; never downloads audio.')
     f.add_argument('link'); f.add_argument('--out', type=Path, required=True)
-    f.add_argument('--provider', choices=['qq', 'playlistout'], default='qq')
+    f.add_argument('--provider', choices=['auto', 'qq', 'playlistout'], default='auto')
+    f.add_argument('--platform', choices=['auto', *PLATFORMS], default='auto', help='Disambiguate raw IDs; bare numeric IDs default to QQ for compatibility.')
     f.add_argument('--expect-count', type=int)
     n = sub.add_parser('normalize', help='Import QQ/Playlist Out JSON, normalized JSON, track arrays, or CSV.')
     n.add_argument('input', type=Path); n.add_argument('--out', type=Path, required=True); n.add_argument('--expect-count', type=int)
@@ -289,16 +389,7 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == 'fetch':
-            pid = playlist_id(args.link)
-            if args.provider == 'qq':
-                url = 'https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg?' + urllib.parse.urlencode(dict(type=1, json=1, utf8=1, onlysong=0, disstid=pid, format='json'))
-            else:
-                url = 'https://playlistout-api.lengxiqwq.com/api/v1/resolve?' + urllib.parse.urlencode({'q': f'https://y.qq.com/n/ryqq/playlist/{pid}'})
-            raw = request_json(url)
-            playlist = normalize(raw, args.expect_count)
-            if playlist['id'] != pid:
-                raise ValueError('Returned playlist ID differs from requested ID.')
-            playlist['sourceUrl'] = f'https://y.qq.com/n/ryqq/playlist/{pid}'
+            playlist, raw = fetch_playlist(args.link, args.provider, args.platform, args.expect_count)
             args.out.mkdir(parents=True, exist_ok=True)
             save_json(args.out / 'source.json', raw)
             export_files(playlist, args.out)

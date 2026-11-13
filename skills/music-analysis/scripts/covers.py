@@ -1,4 +1,4 @@
-"""Fetch and cache bounded, source-attributed QQ album artwork for offline reports."""
+"""Fetch bounded music-platform artwork and cache it for offline reports."""
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
@@ -8,6 +8,7 @@ import re
 import ssl
 import urllib.parse
 import urllib.request
+from platforms import media_url
 
 MAX_BYTES = 2 * 1024 * 1024
 
@@ -28,13 +29,25 @@ def qq_host(url):
         host in ('qq.com', 'gtimg.cn') or host.endswith(('.qq.com', '.gtimg.cn')))
 
 
+class ArtworkRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return super().redirect_request(req, fp, code, msg, headers, media_url(newurl))
+
+
+def open_source(request):
+    opener = urllib.request.build_opener(ArtworkRedirect(), urllib.request.HTTPSHandler(context=tls_context()))
+    return opener.open(request, timeout=8)
+
+
 def download(url):
-    if not qq_host(url):
-        raise ValueError('Artwork must come from an HTTPS QQ / gtimg metadata source.')
-    request = urllib.request.Request(url, headers={'User-Agent': 'MusicAnalysis/0.2', 'Referer': 'https://y.qq.com/'})
-    with urllib.request.urlopen(request, timeout=8, context=tls_context()) as response:
-        if hasattr(response, 'geturl') and not qq_host(response.geturl()):
-            raise ValueError('Artwork redirect left its source domain.')
+    url = media_url(url)
+    headers = {'User-Agent': 'MusicAnalysis/0.4'}
+    if qq_host(url):
+        headers['Referer'] = 'https://y.qq.com/'
+    request = urllib.request.Request(url, headers=headers)
+    with open_source(request) as response:
+        if hasattr(response, 'geturl'):
+            media_url(response.geturl())
         data = response.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise ValueError('Artwork exceeds 2 MiB.')

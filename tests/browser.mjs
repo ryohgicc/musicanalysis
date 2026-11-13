@@ -63,6 +63,14 @@ assert.equal(await page.locator('.era-cover img').count(),9);assert.equal(await 
 assert.equal(await page.locator('[data-tier="大概率合口味"] .count').innerText(),'6');assert.equal(await page.locator('[data-tier="相邻风格"] .count').innerText(),'4');assert.equal(await page.locator('[data-tier="探索"] .count').innerText(),'2');
 assert.match(await page.locator('#order-note').innerText(),/不解释为.*时间演变/);assert.match(await page.locator('.era-boundary').first().innerText(),/不代表时间先后/);
 assert.ok(!(await page.locator('#source-line').innerText()).includes('预览'));
+await page.goto(url('external.html'));
+assert.deepEqual(await page.evaluate(templateContract),originalTemplate,'Other platforms must keep the same design');
+assert.equal(await page.locator('.era').count(),9);assert.equal(await page.locator('.rec-card').count(),12);
+assert.equal(await page.locator('#library-rows a[href^="https://music.163.com/"]').count(),12);
+assert.equal(await page.locator('a[href*="qq.com"]').count(),0);
+assert.ok(await page.locator('img').evaluateAll(imgs=>imgs.length>0&&imgs.every(i=>i.complete&&i.naturalWidth>0&&i.src.startsWith('data:image/'))));
+await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+await page.setViewportSize({width:1440,height:900});
 await page.goto(url('first.html'));assert.match(await page.locator('#era-1 .era-meta').innerText(),/1—6/);
 await page.goto(url('hostile.html'));assert.equal(await page.evaluate(()=>window.pwned),undefined);assert.match(await page.locator('#report-title').innerText(),/onerror/);assert.equal(await page.locator('a[href^="javascript:"]').count(),0);
-assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);console.log('Browser passed: 3 chronology modes, sticky scrolling, jumps, chart, recommendations, persisted/exported feedback, library search/sort/pagination, 4 viewports, hostile strings, default CLI artwork embedding, original design at 4 viewports, preference recommendation links, complete 9/6/12 content, source-order labeling, preview marking and offline loading.');await browser.close();
+assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);console.log('Browser passed: 3 chronology modes, sticky scrolling, jumps, chart, recommendations, persisted/exported feedback, library search/sort/pagination, 4 viewports, hostile strings, default CLI artwork embedding, original design at 4 viewports, preference recommendation links, complete 9/6/12 content, source-order labeling, preview marking, identical cross-platform report and offline loading.');await browser.close();

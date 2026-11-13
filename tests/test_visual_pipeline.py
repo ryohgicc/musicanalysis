@@ -22,7 +22,7 @@ class VisualPipelineTest(unittest.TestCase):
             track['coverUrl']='https://y.gtimg.cn/music/photo_new/test-cover.png'
         with tempfile.TemporaryDirectory() as tmp:
             folder=Path(tmp);save_json(folder/'playlist.json',playlist);save_json(folder/'analysis.json',report)
-            with patch('sys.argv',['workflow.py','render',str(folder/'playlist.json'),str(folder/'analysis.json'),'--output',str(folder/'report.html')]),patch('urllib.request.urlopen',side_effect=lambda *a,**k:io.BytesIO(PNG)),contextlib.redirect_stdout(io.StringIO()):
+            with patch('sys.argv',['workflow.py','render',str(folder/'playlist.json'),str(folder/'analysis.json'),'--output',str(folder/'report.html')]),patch('covers.open_source',side_effect=lambda *a,**k:io.BytesIO(PNG)),contextlib.redirect_stdout(io.StringIO()):
                 main()
             page=(folder/'report.html').read_text()
             payload=page.split('<script type="application/json" id="report-data">')[1].split('</script>')[0]

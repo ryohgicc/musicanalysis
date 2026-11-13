@@ -21,7 +21,7 @@ r['recommendations']=[dict(title='Test Recommendation',artist='Synthetic candida
 for t in p['tracks']:t['coverUrl']=f'https://y.gtimg.cn/music/photo_new/synthetic-{t["index"]}.png'
 save_json(root/'playlist.json',p);save_json(root/'analysis.json',r)
 # The public CLI itself must fetch and embed available artwork, with no --covers argument.
-with patch('sys.argv',['workflow.py','render',str(root/'playlist.json'),str(root/'analysis.json'),'--output',str(root/'report.html'),'--preview']),patch('urllib.request.urlopen',side_effect=lambda *a,**k:io.BytesIO(synthetic_png(1))),contextlib.redirect_stdout(io.StringIO()):
+with patch('sys.argv',['workflow.py','render',str(root/'playlist.json'),str(root/'analysis.json'),'--output',str(root/'report.html'),'--preview']),patch('covers.open_source',side_effect=lambda *a,**k:io.BytesIO(synthetic_png(1))),contextlib.redirect_stdout(io.StringIO()):
     main()
 payload=(root/'report.html').read_text().split('<script type="application/json" id="report-data">')[1].split('</script>')[0]
 covers=json.loads(payload)['covers']
@@ -45,3 +45,14 @@ other_report['insights'][0]['body']='不同曲目与分析内容仍然使用同�
 
 full,full_report=complete_fixture()
 (root/'complete.html').write_text(render(full,full_report,{str(t['index']):data_url(synthetic_png(t['index'])) for t in full['tracks']}),encoding='utf-8')
+
+# A non-QQ full report uses the same public CLI, offline images and template.
+external=copy.deepcopy(full);external['platform']='netease';external['name']='另一平台的虚构歌单'
+for track in external['tracks']:
+    track['songMid']='';track['songId']=str(90000+track['index'])
+    track['sourceUrl']='https://music.163.com/#/song?id='+track['songId']
+    track['coverUrl']=f'https://p3.music.126.net/synthetic-{track["index"]}.png'
+external_report=copy.deepcopy(full_report);external_report['playlistHash']=snapshot_hash(external)
+save_json(root/'external-playlist.json',external);save_json(root/'external-analysis.json',external_report)
+with patch('sys.argv',['workflow.py','render',str(root/'external-playlist.json'),str(root/'external-analysis.json'),'--output',str(root/'external.html')]),patch('covers.open_source',side_effect=lambda *a,**k:io.BytesIO(synthetic_png(2))),contextlib.redirect_stdout(io.StringIO()):
+    main()

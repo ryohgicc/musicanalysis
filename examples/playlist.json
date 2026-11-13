@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "name": "虚构流程示例",
   "id": "demo",
+  "platform": "",
   "sourceUrl": "",
   "exportedAt": "2026-01-01T00:00:00+00:00",
   "trackCount": 6,

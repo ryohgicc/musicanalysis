@@ -8,11 +8,13 @@
 
 ## 歌单 JSON
 
-`normalize` 产生 `schemaVersion,name,id,sourceUrl,exportedAt,trackCount,tracks`。曲目字段：
+`normalize` 产生 `schemaVersion,name,id,platform,sourceUrl,exportedAt,trackCount,tracks`。`platform` 为来源平台标识；无法识别的本地导出可为空。曲目字段：
 
 `index,title,artists[],artist,album,albumMid,durationSeconds,songId,songMid,sourceUrl,coverUrl`
 
-`index` 从 1 连续编号，始终保留输入顺序。艺人数组优先，`artist` 为展示文本。缺少曲目详情 URL 时允许留空，不猜其他平台的 ID。
+`index` 从 1 连续编号，始终保留输入顺序。艺人数组优先，`artist` 为展示文本。QQ 的 `songMid` / `albumMid` 仅用于 QQ；其他平台的 canonical `id` 保存为 `songId`，优先保留其 `sourceUrl` 与 `coverUrl`。缺少详情链接时仅按明确平台与合法 ID 构造已知官方格式；汽水曲目 / 原声类型不明确时留空，不拿其他平台 ID 查询 QQ。
+
+非 QQ 快照哈希包含平台命名空间，避免相同数字 ID 在不同平台误绑定；既有 QQ 哈希保持兼容。旧的其他平台草稿需重新运行 `init-analysis` 并核对证据。本项目 CSV 追加 `songId` / `coverUrl` 两列；需要保留歌单名称、平台与完整艺人数组时优先使用 JSON。
 
 ## 分析 JSON
 

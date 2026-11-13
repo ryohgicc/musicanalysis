@@ -6,7 +6,7 @@
 
 **固定使用当前「声迹」页面。新歌单只替换内容，页面风格、板块顺序、布局与交互保持一致。** 模板带版本与完整性校验；不为每位用户重新设计页面。
 
-支持 QQ 音乐公开歌单链接 / ID，或 QQ / Playlist Out / 规范化 JSON 与 CSV。无需音乐账号登录，不下载音频。默认只读公开元数据，分析与网页留在本地。
+支持 **QQ、网易云、酷狗（含概念版）、酷我、汽水、咪咕** 的公开歌单链接 / 分享短链 / ID，以及 Playlist Out / 规范化 JSON 与 CSV。只读曲目元数据，不下载音频，分析与网页留在本地。酷狗普通版完整导出可能需要用户在上游工具本地登录；本 skill 不接收账号凭证。
 
 ## 安装为 Skill
 
@@ -20,9 +20,9 @@ cp -R musicanalysis/skills/music-analysis ~/.codex/skills/
 
 已有同名 skill 时先比较或备份，避免直接覆盖已有定制。重新加载技能后，可说：
 
-> 用 $music-analysis 分析这个 QQ 音乐歌单，解释偏好和收藏风格变化，推荐未收藏的歌，生成可离线打开的网页报告。歌单链接：……；按收藏时间排列，第 1 首是最新收藏的。
+> 用 $music-analysis 分析这个歌单，解释偏好和收藏风格变化，推荐未收藏的歌，生成可离线打开的网页报告。歌单链接：……；按收藏时间排列，第 1 首是最新收藏的。
 
-提供歌单时，请同时说明 **哪个序号是最新收藏的**，例如“第 1 首最新”或“最后一首最新”。skill 会据此确认分析方向；若歌单经过手动或其他排序，需要进一步确认，不能据此直接推断时间变化。序号以本次解析的原始顺序为准，必要时会用首尾曲名核对。
+提供歌单时，请同时说明 **哪个序号是最新收藏的**，例如“第 1 首最新”或“最后一首最新”；仅提供 ID 时还要注明平台。skill 会据此确认分析方向；若歌单经过手动或其他排序，需要进一步确认，不能据此直接推断时间变化。序号以本次解析的原始顺序为准，必要时会用首尾曲名核对。
 
 入口：[SKILL.md](skills/music-analysis/SKILL.md)。运行脚本只需 Python 3.10+ 标准库；音乐解释需要运行 skill 的模型或人工撰写，本仓库不内置模型账号、LLM API 或密钥。
 
@@ -34,9 +34,27 @@ cp -R musicanalysis/skills/music-analysis ~/.codex/skills/
 
 - `https://y.qq.com/n/ryqq/playlist/<ID>`
 - `https://i2.y.qq.com/.../index.html?id=<ID>`
-- 含链接的分享文案、`disstid=` / `tid=` 地址、纯数字 ID
+- `https://music.163.com/#/playlist?id=<ID>` / `https://163cn.tv/<短链>`
+- 酷狗 / 概念版集合、酷我、汽水 / 抖音、咪咕的歌单分享链接
+- 含链接的分享文案，以及注明平台的歌单 ID
 
-短链没有 ID 时先在浏览器展开。不要把分享页前几首预览当完整歌单。
+短链默认交给 Playlist Out 解析，失败时可先在浏览器展开。不要把分享页前几首预览当完整歌单。
+
+## 平台与解析路线
+
+| 平台 | `--platform` | 默认路线与限制 |
+| --- | --- | --- |
+| QQ 音乐 | `qqmusic` | 长链接 / ID 直连 QQ；短链交给 Playlist Out |
+| 网易云音乐 | `netease` | Playlist Out |
+| 酷狗音乐 | `kugou` | Playlist Out；普通版免登录可能只有 10 首预览，脚本会拒绝 |
+| 酷狗概念版 | `kugou` | Playlist Out，支持集合分享链接 |
+| 酷我音乐 | `kuwo` | Playlist Out |
+| 汽水音乐 | `qishui` | Playlist Out，支持汽水 / 抖音分享链接 |
+| 咪咕音乐 | `migu` | Playlist Out |
+
+`--provider auto` 按链接选择上述路线。非 QQ 平台与 QQ 短链会把歌单链接或 ID 发给 Playlist Out，不发送周边分享文案；能规范化的长链接去掉追踪参数。`--provider qq` 限定 QQ 直连；`--provider playlistout` 强制使用第三方。直连失败不自动改走第三方，也不反复重试。
+
+酷狗返回预览时，请在 Playlist Out 网页 / CLI 本地登录，导出完整 JSON 后导入，无需向 agent 提供密码、Cookie 或 Token。Spotify、Apple Music 链接与用户主页批量解析暂未接入。平台能力依赖上游接口，不能保证每条链接实时可用。
 
 ## 完整报告要求
 
@@ -49,10 +67,12 @@ cp -R musicanalysis/skills/music-analysis ~/.codex/skills/
 从仓库根目录运行：
 
 ```bash
-python3 skills/music-analysis/scripts/workflow.py fetch '<QQ歌单链接或ID>' --out work/snapshot
+python3 skills/music-analysis/scripts/workflow.py fetch '<支持平台的歌单链接>' --out work/snapshot
 python3 skills/music-analysis/scripts/workflow.py stats work/snapshot/playlist.json --output work/stats.json
 python3 skills/music-analysis/scripts/workflow.py init-analysis work/snapshot/playlist.json --output work/analysis.json
 ```
+
+仅提供 ID 时指定平台，例如 `fetch '<网易云歌单ID>' --platform netease --out work/snapshot`。为兼容已有脚本，无平台的纯数字 ID 仍按 QQ 处理；skill 会先确认用户的平台。
 
 然后由 agent 结合统计与具体作品，填写 `work/analysis.json` 的偏好证据、阶段和已核实推荐；[JSON 契约](skills/music-analysis/references/analysis.md) 提供字段解释。草稿默认 `status: draft`，完成分析后才设为 `ready`。没有确认收藏顺序时保留 `order: unknown`；需要先交付内容结构完整的页面时，按上述 source-order 模式做内容分段，不编造时间演变。
 
@@ -61,7 +81,7 @@ python3 skills/music-analysis/scripts/workflow.py validate work/snapshot/playlis
 python3 skills/music-analysis/scripts/workflow.py render work/snapshot/playlist.json work/analysis.json --output outputs/report.html --require-covers
 ```
 
-双击 `outputs/report.html` 即可阅读。默认 `render` 会自动获取首页、阶段和证据卡用到的 QQ 专辑封面，缓存后内嵌到 HTML；缺少封面 URL 时会通过歌曲 MID 查询专辑。生成时需要联网，生成后的数据、封面、CSS 与 JS 均可离线阅读；外部作品链接需联网。
+双击 `outputs/report.html` 即可阅读。默认 `render` 会自动从各平台元数据提供的图片域名获取首页、阶段和证据卡用到的封面，缓存后内嵌到 HTML；仅 QQ 缺少封面 URL 时会通过歌曲 MID 查询专辑，其他平台的 ID 不会被当作 QQ MID。生成时需要联网，生成后的数据、封面、CSS 与 JS 均可离线阅读；外部作品链接需联网。
 
 封面缓存默认位于输出文件旁的 `.music-analysis-covers/`，可用 `--cover-cache <目录>` 指定。`--offline` 只使用缓存或显式提供的 `--covers covers.json`；`--require-covers` 在首页或阶段代表封面缺失时终止生成，适合检查可复现效果。正式报告默认也要求首页和阶段代表封面齐全；缺失会停止。次要证据封面或预览中无法取得的图片会列出并显示几何占位，不会伪造专辑图片。默认最多获取 96 个代表与证据条目的封面，不下载全歌单图片。
 
@@ -73,7 +93,7 @@ python3 skills/music-analysis/scripts/workflow.py render work/snapshot/playlist.
 python3 skills/music-analysis/scripts/workflow.py normalize '<已有导出.json或.csv>' --out work/snapshot
 ```
 
-默认直接请求 QQ 元数据接口，失败不反复重试。`fetch --provider playlistout` 是显式可选的第三方解析路线，会把规范化公开歌单链接发给 Playlist Out；也可用该项目本地导出后再导入。详见[解析说明](skills/music-analysis/references/acquisition.md)。
+本地导入支持 Playlist Out canonical JSON 与 CSV 的 `url`、`duration` 字段；本项目 CSV 也保留曲目 ID 和封面 URL。JSON 会保留平台标识，非 QQ 曲目详情优先沿用原链接。无论在线还是本地，声明数量不符、`isPartial` 或上游预览标记都会停止；`render --preview` 仅放宽报告内容要求，不放宽曲库完整性。详见[解析说明](skills/music-analysis/references/acquisition.md)。
 
 ## 报告功能
 
@@ -116,12 +136,14 @@ npx playwright install chromium
 npm run test:browser     # 离线文件与浏览器交互验证
 ```
 
-浏览器测试覆盖三种顺序状态、滚动目录与跳转、统计切换、推荐筛选、反馈持久化与导出、曲库分页/搜索/排序、不同屏宽、不可信字符串、默认命令自动内嵌封面、四种屏宽的原版字号/颜色/间距基准、不同歌单的同模板与同板块校验、偏好到推荐的跳转与生成后无外部资源加载。测试产物写入 `.test-output/`，不发布。Python 测试不需要 Node；Playwright 仅为开发依赖。
+Python 测试覆盖各平台路由、分享短链、ID / 平台核对、部分歌单拒绝、CSV 字段、多平台封面下载与离线缓存。浏览器测试覆盖三种顺序状态、滚动目录与跳转、统计切换、推荐筛选、反馈持久化与导出、曲库分页/搜索/排序、不同屏宽、不可信字符串、默认命令自动内嵌封面、四种屏宽的原版字号/颜色/间距基准、不同歌单 / 平台的同模板与同板块校验、偏好到推荐的跳转与生成后无外部资源加载。测试产物写入 `.test-output/`，不发布。Python 测试不需要 Node；Playwright 仅为开发依赖。
+
+0.4.0 联网实测：网易云公开示例完整导出 613 首，汽水分享短链完整导出 630 首，各成功获取 4 张代表封面；酷狗普通版示例的预览响应被正确拒绝。其余平台以接口契约回归覆盖，实际可用性需按用户链接确认，不能将模拟测试视为所有平台的联网保证。
 
 代码结构：`skills/music-analysis/scripts/` 为解析/统计/渲染，`assets/report.html` 为模板，`references/` 为方法与来源，`tests/` 为验证，`examples/` 为虚构示例。
 
 ## 引用
 
-实际流程兼容 [Playlist Out](https://github.com/LengxiQwQ/playlistout) 的 JSON 与可选 API；[QQMusicApi](https://github.com/jsososo/QQMusicApi) 是自建接口的可选参考，未打包其代码；视觉参考 [Astryx](https://astryx.atmeta.com/)，模板为本项目编写；浏览器验证使用 [Playwright](https://github.com/microsoft/playwright)。完整借鉴范围和许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+多平台解析调用 [Playlist Out](https://github.com/LengxiQwQ/playlistout) 的统一 API，也支持其本地 JSON / CSV；[QQMusicApi](https://github.com/jsososo/QQMusicApi) 是自建接口的可选参考，未打包其代码；视觉参考 [Astryx](https://astryx.atmeta.com/)，模板为本项目编写；浏览器验证使用 [Playwright](https://github.com/microsoft/playwright)。完整借鉴范围和许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 自有代码采用 MIT；第三方音乐、封面、商标及上游服务不包含在该授权内。更新见 [CHANGELOG.md](CHANGELOG.md)。
