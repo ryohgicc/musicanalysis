@@ -2,6 +2,8 @@
 
 把你的歌单变成一份音乐品味报告：看懂自己喜欢什么、收藏风格如何变化，以及下一首可以听什么。
 
+**[在线体验 Demo →](https://ryohgicc.github.io/musicanalysis/)** · [直接查看第二阶段](https://ryohgicc.github.io/musicanalysis/#era-2)
+
 ## 有哪些功能
 
 - **偏好总结**：分析收藏艺人、作品版本与收藏特征，用具体歌曲解释偏好。
@@ -12,7 +14,7 @@
 
 支持 **QQ 音乐、网易云音乐、酷狗音乐（含概念版）、酷我音乐、汽水音乐、咪咕音乐**，也可导入 JSON / CSV 歌单。
 
-所有歌单使用同一套「声迹」页面设计与板块，只替换曲目、图片和分析内容。克隆仓库后，可打开 [虚构示例](examples/report.html) 查看布局；示例只有 6 首虚构歌曲，是内容预览。
+所有歌单使用同一套「声迹」页面设计与板块，只替换曲目、图片和分析内容。在线 Demo 是作者授权公开的原始报告，包含 799 首收藏、9 个阶段、6 条偏好与 12 首推荐。克隆仓库后也可打开 `docs/index.html`；开发用的 [虚构示例](examples/report.html) 只有 6 首歌曲，是内容预览。
 
 ## 怎么使用
 
@@ -108,7 +110,7 @@ Spotify、Apple Music 链接与用户主页批量解析尚未接入。上游接�
 
 歌单反映收藏，不能自动得知播放次数、首次听歌时间或实际年份。分析会引用具体曲目，不根据歌名猜人格、BPM 或精确匹配率；推荐未在歌单中检出，也不代表你从未听过。
 
-数据与报告默认保存在本地的 `work/`、`outputs/`，这些目录不会提交到 Git。生成网页不等于公开发布；仓库示例只使用虚构曲目与原创几何图片，不提供音频或歌词下载。
+数据与报告默认保存在本地的 `work/`、`outputs/`，这些目录不会提交到 Git。生成网页不等于公开发布；只有 `docs/index.html` 是作者明确授权公开的真实报告，其余开发示例使用虚构曲目与原创几何图片。Demo 的试听反馈只保存在访问者自己的浏览器中。本项目不提供音频或歌词下载。
 
 ## 开发与命令行
 
@@ -167,6 +169,7 @@ npm test                 # 数据、顺序、排重、解析、封面与导出
 npm run check            # Python 编译检查
 npm run build            # 重建虚构示例
 npm run test:browser     # 桌面 / 手机布局、交互、同模板与离线检查
+npm run test:demo        # 公开 Demo 的图片、阶段链接、手机布局与交互
 ```
 
 查看自带示例可直接打开 `examples/report.html`；手动验证和生成预览：
@@ -176,7 +179,13 @@ python3 skills/music-analysis/scripts/workflow.py validate examples/playlist.jso
 python3 skills/music-analysis/scripts/workflow.py render examples/playlist.json examples/analysis.json --output work/demo.html --preview
 ```
 
-上述手动示例没有真实封面 URL，会显示占位；仓库自带的 HTML 由 `npm run build` 生成，包含原创几何示意图。测试产物位于 `.test-output/`，不发布。GitHub Pages 未自动启用。
+上述手动示例没有真实封面 URL，会显示占位；仓库自带的 HTML 由 `npm run build` 生成，包含原创几何示意图。测试产物位于 `.test-output/`，不发布。
+
+### Demo 托管
+
+在线 Demo 使用 GitHub Pages，发布源为 `main` 分支的 `/docs` 目录。`docs/index.html` 保留用户指定报告的原文件，封面与资源已内嵌；不重新渲染、不随开发示例构建覆盖。推送该目录的更新后，由 GitHub Pages 自动发布。普通歌单报告仍只保存在本地。
+
+Fork 仓库后如需发布自己的 Demo，在 **Settings → Pages → Deploy from a branch** 中选择 `main` 与 `/docs`，并将本 README 的预览链接改为自己的地址。替换报告前确认其中的数据可以公开。
 
 ### 进一步阅读
 

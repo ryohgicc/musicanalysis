@@ -7,7 +7,8 @@
     "test": "python3 -m unittest discover -s tests -v",
     "check": "python3 -m compileall -q skills/music-analysis/scripts tests",
     "build": "python3 tests/make_demo.py",
-    "test:browser": "python3 tests/browser_fixture.py && node tests/browser.mjs"
+    "test:browser": "python3 tests/browser_fixture.py && node tests/browser.mjs",
+    "test:demo": "node tests/demo.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"
