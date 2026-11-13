@@ -51,7 +51,11 @@ python3 skills/music-analysis/scripts/workflow.py validate work/snapshot/playlis
 python3 skills/music-analysis/scripts/workflow.py render work/snapshot/playlist.json work/analysis.json --output outputs/report.html
 ```
 
-双击 `outputs/report.html` 即可阅读。网页包含全部数据、CSS 与 JS，不依赖服务端或 CDN；外部作品链接需联网。可选 `--covers covers.json` 内嵌有来源的光栅封面 data URL，不提供时用几何占位。
+双击 `outputs/report.html` 即可阅读。默认 `render` 会自动获取首页、阶段和证据卡用到的 QQ 专辑封面，缓存后内嵌到 HTML；缺少封面 URL 时会通过歌曲 MID 查询专辑。生成时需要联网，生成后的数据、封面、CSS 与 JS 均可离线阅读；外部作品链接需联网。
+
+封面缓存默认位于输出文件旁的 `.music-analysis-covers/`，可用 `--cover-cache <目录>` 指定。`--offline` 只使用缓存或显式提供的 `--covers covers.json`；`--require-covers` 在首页或阶段代表封面缺失时终止生成，适合检查可复现效果。无法取得的封面会在终端列出并显示几何占位，不会伪造专辑图片。默认最多获取 96 个代表与证据条目的封面，不下载全歌单图片。
+
+更新仓库后，也要把新版 `skills/music-analysis/` 同步到实际使用的 skill 目录并重新加载；仅 `git pull` 不会更新之前复制安装的 skill。
 
 本地导入：
 
@@ -63,6 +67,7 @@ python3 skills/music-analysis/scripts/workflow.py normalize '<已有导出.json�
 
 ## 报告功能
 
+- 封面拼贴首页、唱片式阶段配图、带缩略图的偏好证据卡；使用随仓库发布的完整模板。
 - 已确认顺序时：按歌单内容划分的全屏滚动章节、固定目录与当前阶段同步、曲目证据和阶段跳转；不固定阶段数。
 - 偏好：总览、详细解释、具体收藏锚点、下一步试听方向。
 - 统计：艺人参与条目、疑似版本合并两种口径，合作计数不当作风格百分比。
@@ -72,14 +77,14 @@ python3 skills/music-analysis/scripts/workflow.py normalize '<已有导出.json�
 
 ## 可运行示例
 
-仓库只提交 **6 首虚构曲目** 的示例，不含任何真实用户歌单、昵称或封面：
+仓库只提交 **6 首虚构曲目** 的示例，不含任何真实用户歌单、昵称或真实专辑封面。预生成示例配有本项目原创的几何示意图：
 
 ```bash
 python3 skills/music-analysis/scripts/workflow.py validate examples/playlist.json examples/analysis.json
 python3 skills/music-analysis/scripts/workflow.py render examples/playlist.json examples/analysis.json --output work/demo.html
 ```
 
-可直接打开 [examples/report.html](examples/report.html)。示例没有伪造真实音乐推荐；推荐、反馈等交互由测试临时构造的合成候选验证。
+可直接打开 [examples/report.html](examples/report.html) 查看带原创示意图的布局；上面的 CLI 示例没有真实 QQ 图片来源，因此会提示缺图并显示占位。`npm run build` 可重建带示意图的示例。示例没有伪造真实音乐推荐；推荐、反馈等交互由测试临时构造的合成候选验证。
 
 ## 方法与边界
 
@@ -93,14 +98,14 @@ python3 skills/music-analysis/scripts/workflow.py render examples/playlist.json 
 
 ```bash
 npm install
-npm test                 # Python 数据、顺序、排重与导出测试
+npm test                 # Python 数据、顺序、排重、封面与导出测试
 npm run check            # Python 编译检查
 npm run build            # 重建虚构示例
 npx playwright install chromium
 npm run test:browser     # 离线文件与浏览器交互验证
 ```
 
-浏览器测试覆盖三种顺序状态、滚动目录与跳转、统计切换、推荐筛选、反馈持久化与导出、曲库分页/搜索/排序、不同屏宽、不可信字符串与无外部资源加载。测试产物写入 `.test-output/`，不发布。Python 测试不需要 Node；Playwright 仅为开发依赖。
+浏览器测试覆盖三种顺序状态、滚动目录与跳转、统计切换、推荐筛选、反馈持久化与导出、曲库分页/搜索/排序、不同屏宽、不可信字符串、默认命令自动内嵌封面与生成后无外部资源加载。测试产物写入 `.test-output/`，不发布。Python 测试不需要 Node；Playwright 仅为开发依赖。
 
 代码结构：`skills/music-analysis/scripts/` 为解析/统计/渲染，`assets/report.html` 为模板，`references/` 为方法与来源，`tests/` 为验证，`examples/` 为虚构示例。
 

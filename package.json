@@ -1,6 +1,6 @@
 {
   "name": "musicanalysis",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Evidence-based playlist analysis skill and offline listening reports",
   "scripts": {
@@ -9,5 +9,7 @@
     "build": "python3 tests/make_demo.py",
     "test:browser": "python3 tests/browser_fixture.py && node tests/browser.mjs"
   },
-  "devDependencies": { "playwright": "1.62.1" }
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
 }

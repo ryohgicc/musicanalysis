@@ -9,6 +9,11 @@ const browser=await chromium.launch({headless:true});const context=await browser
 const page=await context.newPage();let errors=[],requests=[];
 page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
 await page.emulateMedia({reducedMotion:'reduce'});await page.goto(url('report.html'));
+assert.equal(await page.locator('.wordmark').count(),1);
+assert.equal(await page.locator('.float-album img').count(),4);
+assert.equal(await page.locator('.era-cover img').count(),3);
+assert.equal(await page.locator('.insight-proof-song img').count(),2);
+assert.ok(await page.locator('img').evaluateAll(imgs=>imgs.length>0&&imgs.every(i=>i.complete&&i.naturalWidth>0&&i.src.startsWith('data:image/'))),'default CLI must produce decoded offline cover images');
 assert.equal(await page.locator('#track-map rect').count(),18);assert.equal(await page.locator('.era').count(),3);
 for(const i of [1,2,3,1]){await page.locator(`#era-${i}`).evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));await page.waitForFunction(n=>document.querySelector('.era-link[aria-current="step"]').dataset.era===String(n-1),i);assert.ok(Math.abs((await page.locator('.journey-nav').boundingBox()).y)<2);}
 await page.locator('.era-link').last().click();assert.equal(await page.evaluate(()=>location.hash),'#era-3');
@@ -24,4 +29,4 @@ for(const v of [{width:1024,height:768},{width:390,height:844},{width:320,height
 await page.setViewportSize({width:1440,height:900});await page.goto(url('unknown.html'));assert.equal(await page.locator('#journey').isVisible(),false);assert.equal(await page.locator('.era').count(),0);
 await page.goto(url('first.html'));assert.match(await page.locator('#era-1 .era-meta').innerText(),/1—6/);
 await page.goto(url('hostile.html'));assert.equal(await page.evaluate(()=>window.pwned),undefined);assert.match(await page.locator('#report-title').innerText(),/onerror/);assert.equal(await page.locator('a[href^="javascript:"]').count(),0);
-assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);console.log('Browser passed: 3 chronology modes, sticky scrolling, jumps, chart, recommendations, persisted/exported feedback, library search/sort/pagination, 4 viewports, hostile strings and offline loading.');await browser.close();
+assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);console.log('Browser passed: 3 chronology modes, sticky scrolling, jumps, chart, recommendations, persisted/exported feedback, library search/sort/pagination, 4 viewports, hostile strings, default CLI artwork embedding and offline loading.');await browser.close();

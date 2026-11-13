@@ -10,7 +10,7 @@
 
 `normalize` 产生 `schemaVersion,name,id,sourceUrl,exportedAt,trackCount,tracks`。曲目字段：
 
-`index,title,artists[],artist,album,durationSeconds,songId,songMid,sourceUrl,coverUrl`
+`index,title,artists[],artist,album,albumMid,durationSeconds,songId,songMid,sourceUrl,coverUrl`
 
 `index` 从 1 连续编号，始终保留输入顺序。艺人数组优先，`artist` 为展示文本。缺少曲目详情 URL 时允许留空，不猜其他平台的 ID。
 
@@ -26,6 +26,7 @@
   "title": "我的听歌地图",
   "summary": "一句概括，说明分析来自收藏而非播放次数。",
   "order": "last-oldest",
+  "heroAnchorIds": [6, 3, 5, 1],
   "statsCommentary": "可选：基于实际统计解释版本影响、专辑覆盖和合作计数。",
   "stages": [
     {
@@ -79,6 +80,8 @@
 - `last-oldest`：末首较早，阶段如 `[4,6]` → `[1,3]`；每段内按大编号到小编号读。
 - `first-oldest`：首首较早，阶段如 `[1,3]` → `[4,6]`。
 - `unknown`：没有确认收藏方向，必须 `stages: []`，模板只显示偏好、推荐和曲库。
+
+`heroAnchorIds` 可选，用真实收藏编号指定首页最多四张封面；缺省从阶段代表曲、偏好证据与曲库选择。`coverIndex` 可选，用于指定阶段代表封面；缺省用该阶段第一条 `anchorIds`。封面来自曲目元数据，不由模型生成。
 
 阶段必须从头到尾覆盖所有条目一次，证据必须属于该阶段。不要为了满足这个校验制造时间线：没有用户确认时保持 unknown；已知方向但看不出合理阶段时也可以不设阶段。
 

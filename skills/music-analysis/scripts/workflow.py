@@ -15,6 +15,7 @@ import urllib.parse
 import urllib.request
 
 from analyze_playlist import analyze, credits, pick
+from covers import collect_covers, hero_indices, tls_context
 
 HERE = Path(__file__).resolve().parent
 
@@ -37,7 +38,7 @@ def safe_output(path, *inputs):
 def request_json(url):
     # Respect host trust stores / SSL_CERT_FILE; never disable TLS verification.
     req = urllib.request.Request(url, headers={'User-Agent': 'MusicAnalysis/1.0', 'Referer': 'https://y.qq.com/'})
-    with urllib.request.urlopen(req, timeout=30, context=ssl.create_default_context()) as response:
+    with urllib.request.urlopen(req, timeout=30, context=tls_context()) as response:
         data = response.read(32 * 1024 * 1024 + 1)
     if len(data) > 32 * 1024 * 1024:
         raise ValueError('Metadata response exceeds 32 MiB.')
@@ -105,7 +106,7 @@ def normalize(data, expected=None):
         if 'index' in row and int(row['index']) != i:
             raise ValueError('Noncontiguous indices: preserve original order; normalize a complete export.')
         album = pick(row, 'album', 'albumname', '专辑', 'Album')
-        album_mid = str(row.get('albummid', ''))
+        album_mid = str(pick(row, 'albumMid', 'albummid'))
         if isinstance(album, dict):
             album_mid = str(album.get('mid', ''))
             album = album.get('title', album.get('name', ''))
@@ -125,7 +126,7 @@ def normalize(data, expected=None):
         if not cover and re.fullmatch(r'[A-Za-z0-9_]+', album_mid):
             cover = f'https://y.gtimg.cn/music/photo_new/T002R300x300M000{album_mid}.jpg'
         tracks.append(dict(index=i, title=title, artists=artists, artist='、'.join(artists),
-                           album=str(album), durationSeconds=round(float(seconds or 0)),
+                           album=str(album), albumMid=album_mid, durationSeconds=round(float(seconds or 0)),
                            songId=str(pick(row, 'songId', 'songid')), songMid=mid,
                            sourceUrl=source, coverUrl=cover))
     pid = str(pick(meta, 'id', 'disstid'))
@@ -196,6 +197,8 @@ def validate_analysis(playlist, report):
         anchors([e['index'] for e in insight.get('evidence', [])])
         if any(not e.get('note') for e in insight['evidence']):
             raise ValueError('Explain each evidence track.')
+    if report.get('heroAnchorIds'):
+        anchors(report['heroAnchorIds'])
     stats = analyze(playlist['tracks'])
     seen_recs = set()
     for rec in report.get('recommendations', []):
@@ -238,7 +241,7 @@ def render(playlist, report, covers=None):
         if not re.fullmatch(r'data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=\s]+', value):
             raise ValueError('Covers must be base64 JPEG, PNG or WebP data URLs.')
         embedded[str(index)] = value
-    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded)
+    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded, heroIndices=hero_indices(playlist, report), templateVersion='0.2.0')
     payload = json.dumps(bundle, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
     template = (HERE.parent / 'assets/report.html').read_text(encoding='utf-8')
     return template.replace('__DOCUMENT_TITLE__', html.escape(report['title'])).replace('/*__REPORT_DATA__*/', payload)
@@ -259,6 +262,9 @@ def main():
         p = sub.add_parser(command); p.add_argument('playlist', type=Path); p.add_argument('analysis', type=Path)
         if command == 'render':
             p.add_argument('--output', type=Path, required=True); p.add_argument('--covers', type=Path)
+            p.add_argument('--offline', action='store_true', help='Use only supplied / cached artwork; no network.')
+            p.add_argument('--require-covers', action='store_true', help='Fail if a chapter/hero representative image is unavailable.')
+            p.add_argument('--cover-cache', type=Path, help='Artwork cache (default: beside output).')
     args = parser.parse_args()
     try:
         if args.command == 'fetch':
@@ -301,7 +307,20 @@ def main():
                 validate_analysis(playlist, report); print('Analysis evidence and chronology are valid.')
             else:
                 safe_output(args.output, args.playlist, args.analysis, args.covers)
-                page = render(playlist, report, read_json(args.covers) if args.covers else None)
+                supplied = read_json(args.covers) if args.covers else None
+                # Validate before network access. User metadata cannot trigger rendering of an invalid report.
+                render(playlist, report, supplied)
+                covers, failures = collect_covers(playlist, report,
+                    args.cover_cache or args.output.parent / '.music-analysis-covers', supplied, args.offline)
+                required = {s.get('coverIndex') or s['anchorIds'][0] for s in report.get('stages', [])}
+                required.update(hero_indices(playlist, report))
+                missing = sorted(i for i in required if str(i) not in covers)
+                if args.require_covers and missing:
+                    raise ValueError(f'Representative artwork unavailable at indices {missing}. Check metadata/network or supply --covers.')
+                page = render(playlist, report, covers)
+                print(f'Artwork: {len(covers)} embedded, {len(failures)} unavailable.', file=sys.stderr)
+                if failures:
+                    print('Artwork fallback: ' + '; '.join(f"#{f['index']} {f['reason']}" for f in failures[:5]), file=sys.stderr)
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 args.output.write_text(page, encoding='utf-8'); print(f'Wrote {args.output}')
     except (ValueError, KeyError, TypeError, OSError) as e:
