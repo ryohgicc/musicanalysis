@@ -2,7 +2,9 @@
 
 把你的歌单变成一份音乐品味报告：看懂自己喜欢什么、收藏风格如何变化，以及下一首可以听什么。
 
-**[在线体验 Demo →](https://ryohgicc.github.io/musicanalysis/)** · [直接查看第二阶段](https://ryohgicc.github.io/musicanalysis/#era-2)
+**[在线体验原版 Demo →](https://ryohgicc.github.io/musicanalysis/)** · **[体验全屏动效版 →](https://ryohgicc.github.io/musicanalysis/apple-motion-report/)**
+
+动效版是一份独立预览：自然滚动切换 24 个场景，阶段故事与证据直接展开，偏好证据带歌曲封面，移除底部导航，并提供阅读模式。正式 skill 仍使用原来的固定模板。
 
 ## 有哪些功能
 
@@ -110,7 +112,7 @@ Spotify、Apple Music 链接与用户主页批量解析尚未接入。上游接�
 
 歌单反映收藏，不能自动得知播放次数、首次听歌时间或实际年份。分析会引用具体曲目，不根据歌名猜人格、BPM 或精确匹配率；推荐未在歌单中检出，也不代表你从未听过。
 
-数据与报告默认保存在本地的 `work/`、`outputs/`，这些目录不会提交到 Git。生成网页不等于公开发布；只有 `docs/index.html` 是作者明确授权公开的真实报告，其余开发示例使用虚构曲目与原创几何图片。Demo 的试听反馈只保存在访问者自己的浏览器中。本项目不提供音频或歌词下载。
+数据与报告默认保存在本地的 `work/`、`outputs/`，这些目录不会提交到 Git。生成网页不等于公开发布；`docs/index.html` 和 `docs/apple-motion-report/index.html` 是作者明确授权公开的同一份真实报告的两个版本，其余开发示例使用虚构曲目与原创几何图片。Demo 的试听反馈只保存在访问者自己的浏览器中。本项目不提供音频或歌词下载。
 
 ## 开发与命令行
 
@@ -169,7 +171,8 @@ npm test                 # 数据、顺序、排重、解析、封面与导出
 npm run check            # Python 编译检查
 npm run build            # 重建虚构示例
 npm run test:browser     # 桌面 / 手机布局、交互、同模板与离线检查
-npm run test:demo        # 公开 Demo 的图片、阶段链接、手机布局与交互
+npm run test:demo        # 原版公开 Demo 的图片、阶段链接、手机布局与交互
+npm run test:motion      # 全屏动效 Demo 的封面、滚动、内容与手机布局
 ```
 
 查看自带示例可直接打开 `examples/report.html`；手动验证和生成预览：

@@ -8,7 +8,8 @@
     "check": "python3 -m compileall -q skills/music-analysis/scripts tests",
     "build": "python3 tests/make_demo.py",
     "test:browser": "python3 tests/browser_fixture.py && node tests/browser.mjs",
-    "test:demo": "node tests/demo.mjs"
+    "test:demo": "node tests/demo.mjs",
+    "test:motion": "node tests/motion.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"
