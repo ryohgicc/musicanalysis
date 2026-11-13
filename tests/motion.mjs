@@ -30,6 +30,9 @@ try{
   assert.equal(await page.locator('.dock,#progress,#dots').count(),0);
   await page.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
   assert.ok(await page.locator('#preference-groove .proof-thumb img').count()===3);
+  assert.equal(await page.locator('.rec-art img').count(),12);
+  assert.equal(data.recommendationArtwork['9'].title,'My Jinji (Audiotree Live)');
+  for(const [i,r] of data.recommendations.entries())assert.equal(await page.locator(`#recommendation-${i} .rec-art img`).getAttribute('alt'),`${r.artist}《${r.title}》封面`);
   assert.ok(await page.locator('img').evaluateAll(imgs=>imgs.every(i=>i.src.startsWith('data:image/'))));
   for(const [i,stage] of data.stages.entries()){
     const body=await page.locator(`#era-${i+1}`).textContent();
@@ -55,6 +58,11 @@ try{
   await page.setViewportSize({width:1440,height:960});await page.waitForTimeout(100);
   await go(14);await page.locator('#preference-groove [data-detail]').click();
   assert.equal(await page.locator('dialog .proof-thumb img').count(),3);
+  await page.keyboard.press('Escape');
+  await go(20);await page.locator('#recommendation-9 [data-detail]').click();
+  assert.equal(await page.locator('dialog .rec-detail-art img').count(),1);
+  assert.ok((await page.locator('dialog .rec-detail-art').innerText()).includes('Audiotree Live'));
+  assert.equal(await page.locator('dialog .art-source a').getAttribute('href'),data.recommendationArtwork['9'].source);
   await page.keyboard.press('Escape');
   await go(19);const like=page.locator('#discover [data-feedback="like"]').first();await like.click();
   assert.equal(await like.getAttribute('aria-pressed'),'true');

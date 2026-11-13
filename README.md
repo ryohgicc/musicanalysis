@@ -4,7 +4,7 @@
 
 **[在线体验原版 Demo →](https://ryohgicc.github.io/musicanalysis/)** · **[体验全屏动效版 →](https://ryohgicc.github.io/musicanalysis/apple-motion-report/)**
 
-动效版是一份独立预览：自然滚动切换 24 个场景，阶段故事与证据直接展开，偏好证据带歌曲封面，移除底部导航，并提供阅读模式。正式 skill 仍使用原来的固定模板。
+动效版是一份独立预览：自然滚动切换 24 个场景，阶段故事与证据直接展开，偏好证据和 12 首推荐带真实封面（含现场版本），移除底部导航，并提供阅读模式。正式 skill 仍使用原来的固定模板。
 
 ## 有哪些功能
 
