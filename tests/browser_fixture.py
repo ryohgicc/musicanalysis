@@ -9,11 +9,14 @@ from workflow import render, snapshot_hash, main, save_json
 from artwork import synthetic_png
 root=Path(__file__).resolve().parents[1]/'.test-output';root.mkdir(exist_ok=True)
 p,r=fixture()
+r['insights'][0]['recommendationIds']=[0]
+r['insights'][0]['kicker']='MELODY'
+r['insights'][0]['direction']='Compare melody, voice and arrangement on the next listen.'
 for index in range(7,19):
     p['tracks'].append(dict(index=index,title=f'Synthetic {index}',artists=['Synthetic artist'],artist='Synthetic artist',album='Demo',durationSeconds=0,songId='',songMid=f'fake{index}',sourceUrl='',coverUrl=''))
 p['trackCount']=18;r['playlistHash']=snapshot_hash(p)
 r['stages']=[dict(range=[13,18],title='Early',tag='早期',body='Synthetic example.',insight='Evidence only.',anchorIds=[18,13]),dict(range=[7,12],title='Middle',tag='中期',body='Synthetic example.',insight='Evidence only.',anchorIds=[12,7]),dict(range=[1,6],title='Latest',tag='近期',body='Synthetic example.',insight='Evidence only.',anchorIds=[6,1])]
-r['recommendations']=[dict(title='Test Recommendation',artist='Synthetic candidate',tier='探索',anchorIds=[6,1],reason='For browser testing only.',difference='Synthetic fixture.',source='https://example.org/fixture')]
+r['recommendations']=[dict(title='Test Recommendation',artist='Synthetic candidate',tier='探索',anchorIds=[4,7],reason='For browser testing only.',difference='Synthetic fixture.',source='https://example.org/fixture')]
 for t in p['tracks']:t['coverUrl']=f'https://y.gtimg.cn/music/photo_new/synthetic-{t["index"]}.png'
 save_json(root/'playlist.json',p);save_json(root/'analysis.json',r)
 # The public CLI itself must fetch and embed available artwork, with no --covers argument.

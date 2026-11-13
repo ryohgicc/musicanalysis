@@ -197,6 +197,11 @@ def validate_analysis(playlist, report):
         anchors([e['index'] for e in insight.get('evidence', [])])
         if any(not e.get('note') for e in insight['evidence']):
             raise ValueError('Explain each evidence track.')
+        recommendation_ids = insight.get('recommendationIds', [])
+        if not isinstance(recommendation_ids, list) or any(
+                type(i) is not int or not 0 <= i < len(report.get('recommendations', []))
+                for i in recommendation_ids):
+            raise ValueError('Insight recommendationIds must refer to report recommendations (zero-based).')
     if report.get('heroAnchorIds'):
         anchors(report['heroAnchorIds'])
     stats = analyze(playlist['tracks'])
@@ -241,7 +246,7 @@ def render(playlist, report, covers=None):
         if not re.fullmatch(r'data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=\s]+', value):
             raise ValueError('Covers must be base64 JPEG, PNG or WebP data URLs.')
         embedded[str(index)] = value
-    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded, heroIndices=hero_indices(playlist, report), templateVersion='0.2.0')
+    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded, heroIndices=hero_indices(playlist, report), templateVersion='0.2.1')
     payload = json.dumps(bundle, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
     template = (HERE.parent / 'assets/report.html').read_text(encoding='utf-8')
     return template.replace('__DOCUMENT_TITLE__', html.escape(report['title'])).replace('/*__REPORT_DATA__*/', payload)

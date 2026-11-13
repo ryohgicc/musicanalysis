@@ -60,6 +60,14 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'review_same_title'):validate_analysis(p,r)
         rec['title']='Uncollected';validate_analysis(p,r);rec['source']='javascript:alert(1)'
         with self.assertRaises(ValueError):validate_analysis(p,r)
+    def test_insight_recommendation_references(self):
+        p,r=fixture();r['insights'][0]['recommendationIds']=[0]
+        with self.assertRaisesRegex(ValueError,'recommendationIds'):validate_analysis(p,r)
+        r['recommendations']=[dict(title='Uncollected',artist='New artist',tier='探索',anchorIds=[3],reason='test',difference='test',source='https://example.org/work')]
+        validate_analysis(p,r)
+        r['insights'][0]['recommendationIds']=[True]
+        with self.assertRaisesRegex(ValueError,'recommendationIds'):validate_analysis(p,r)
+
     def test_exports_and_untrusted_metadata(self):
         p,r=fixture();p['tracks'][0]['title']='=SUM(1,2)'
         with tempfile.TemporaryDirectory() as d:
