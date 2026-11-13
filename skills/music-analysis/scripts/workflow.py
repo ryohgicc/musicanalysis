@@ -246,9 +246,16 @@ def render(playlist, report, covers=None):
         if not re.fullmatch(r'data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=\s]+', value):
             raise ValueError('Covers must be base64 JPEG, PNG or WebP data URLs.')
         embedded[str(index)] = value
-    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded, heroIndices=hero_indices(playlist, report), templateVersion='0.2.1')
+    assets = HERE.parent / 'assets'
+    template = (assets / 'report.html').read_text(encoding='utf-8')
+    identity = read_json(assets / 'report-template.json')
+    digest = hashlib.sha256(template.encode('utf-8')).hexdigest()
+    if digest != identity['sha256']:
+        raise ValueError('Report template has changed. Restore the released template; new playlists replace data only.')
+    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded,
+                  heroIndices=hero_indices(playlist, report), templateId=identity['id'],
+                  templateVersion=identity['version'], templateHash=digest)
     payload = json.dumps(bundle, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
-    template = (HERE.parent / 'assets/report.html').read_text(encoding='utf-8')
     return template.replace('__DOCUMENT_TITLE__', html.escape(report['title'])).replace('/*__REPORT_DATA__*/', payload)
 
 

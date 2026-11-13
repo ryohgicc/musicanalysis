@@ -2,6 +2,8 @@
 
 Reusable skill in `skills/music-analysis/`; scripts use Python standard library, browser report uses plain CSS/JS. Runtime has no Node dependency. Tests require Python 3.10+ and Playwright development tooling.
 
+The released 声迹 design is fixed. Ordinary playlist generation changes data only; never edit template HTML, renderer, layout or the template lock for a new playlist. Preserve all main sections and use in-place pending states for missing data. Explicit design updates must update `assets/report-template.json` together with the template and pass the full gate.
+
 Inspect `git status -sb` before edits. Keep generated private playlists, API responses, cookies, feedback and reports in ignored `work/`, `outputs/` or `.test-output/`. Only fictional examples are committed. Do not reverse or silently trim playlist order. Do not invent listening chronology or audio features from metadata.
 
 Commands from repository root:

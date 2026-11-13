@@ -7,6 +7,7 @@ from pathlib import Path
 from test_workflow import fixture
 from workflow import render, snapshot_hash, main, save_json
 from artwork import synthetic_png
+from covers import data_url
 root=Path(__file__).resolve().parents[1]/'.test-output';root.mkdir(exist_ok=True)
 p,r=fixture()
 r['insights'][0]['recommendationIds']=[0]
@@ -30,3 +31,14 @@ first=copy.deepcopy(r);first['order']='first-oldest';first['stages'].reverse()
 (root/'first.html').write_text(render(p,first,covers),encoding='utf-8')
 hostile=copy.deepcopy(p);hostile['tracks'][0]['title']='</script><img src=x onerror="window.pwned=1">';hostile['tracks'][0]['sourceUrl']='javascript:window.pwned=1';bad=copy.deepcopy(r);bad['title']='<img src=x onerror="window.pwned=1">';bad['playlistHash']=snapshot_hash(hostile)
 (root/'hostile.html').write_text(render(hostile,bad,covers),encoding='utf-8')
+# A different playlist changes data and repeated item counts, never the design.
+other,other_report=fixture()
+other['name']='另一份虚构歌单'
+for track in other['tracks']:
+    track['title']=f"另一首作品 {track['index']}"
+    track['artists']=['Different artist'];track['artist']='Different artist'
+    track['album']='Different album'
+other_report['playlistHash']=snapshot_hash(other)
+other_report['title']='另一份歌单的听歌地图'
+other_report['insights'][0]['body']='不同曲目与分析内容仍然使用同一套版式。'
+(root/'different.html').write_text(render(other,other_report,{str(t['index']):data_url(synthetic_png(t['index'])) for t in other['tracks']}),encoding='utf-8')

@@ -1,9 +1,11 @@
 import csv
+import hashlib
 import json
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'skills/music-analysis/scripts'))
 from workflow import normalize, playlist_id, snapshot_hash, validate_analysis, render, export_files
 from analyze_playlist import analyze, credits
@@ -67,6 +69,18 @@ class WorkflowTest(unittest.TestCase):
         validate_analysis(p,r)
         r['insights'][0]['recommendationIds']=[True]
         with self.assertRaisesRegex(ValueError,'recommendationIds'):validate_analysis(p,r)
+
+    def test_modified_design_is_rejected(self):
+        p,r=fixture()
+        assets=Path(__file__).resolve().parents[1]/'skills/music-analysis/assets'
+        original=(assets/'report.html').read_bytes()
+        with tempfile.TemporaryDirectory() as tmp:
+            copied=Path(tmp)/'assets';copied.mkdir()
+            (copied/'report.html').write_bytes(original.replace(b'--blue:#3357ff',b'--blue:#ff3357'))
+            (copied/'report-template.json').write_text(json.dumps(dict(
+                id='shengji',version='test',sha256=hashlib.sha256(original).hexdigest())))
+            with patch('workflow.HERE',Path(tmp)/'scripts'),self.assertRaisesRegex(ValueError,'template.*changed'):
+                render(p,r)
 
     def test_exports_and_untrusted_metadata(self):
         p,r=fixture();p['tracks'][0]['title']='=SUM(1,2)'

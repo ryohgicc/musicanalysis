@@ -26,6 +26,14 @@ for (const {viewport,styles} of design.viewports) {
   assert.deepEqual(actual,styles,`Original design differs at ${viewport.width}px`);
 }
 await page.setViewportSize({width:1440,height:900});
+const templateContract=()=>({
+  styles:document.querySelector('style').textContent,
+  script:document.querySelector('script:last-of-type').textContent,
+  sections:[...document.querySelectorAll('.report-main>section')].map(e=>({id:e.id,classes:e.className})),
+  navigation:[...document.querySelectorAll('.header-nav a')].map(e=>e.getAttribute('href')),
+  identity:(()=>{const d=JSON.parse(document.querySelector('#report-data').textContent);return [d.templateId,d.templateVersion,d.templateHash];})()
+});
+const originalTemplate=await page.evaluate(templateContract);
 assert.equal(await page.locator('#track-map rect').count(),18);assert.equal(await page.locator('.era').count(),3);
 for(const i of [1,2,3,1]){await page.locator(`#era-${i}`).evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));await page.waitForFunction(n=>document.querySelector('.era-link[aria-current="step"]').dataset.era===String(n-1),i);assert.ok(Math.abs((await page.locator('.journey-nav').boundingBox()).y)<2);}
 await page.locator('.era-link').last().click();assert.equal(await page.evaluate(()=>location.hash),'#era-3');
@@ -39,7 +47,15 @@ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('
 assert.equal(await page.locator('#library-rows tr').count(),12);await page.locator('#page-next').click();assert.equal(await page.locator('#library-rows tr').count(),6);
 await page.locator('#library-search').fill('Synthetic 18');assert.equal(await page.locator('#library-rows tr').count(),1);await page.locator('#library-search').fill('no-matching-test');assert.match(await page.locator('#library-rows').innerText(),/没有匹配/);await page.locator('#library-search').fill('');await page.locator('#library-order').selectOption('reverse');assert.equal(await page.locator('#library-rows td').first().innerText(),'18');
 for(const v of [{width:1024,height:768},{width:390,height:844},{width:320,height:740}]){await page.setViewportSize(v);await page.locator('#era-3').evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));await page.waitForFunction(()=>document.querySelector('.era-link[aria-current="step"]').dataset.era==='2');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const rect=await page.locator('.era-link').last().boundingBox();assert.ok(rect.x>=0&&rect.x+rect.width<=v.width);}
-await page.setViewportSize({width:1440,height:900});await page.goto(url('unknown.html'));assert.equal(await page.locator('#journey').isVisible(),false);assert.equal(await page.locator('.era').count(),0);
+await page.setViewportSize({width:1440,height:900});await page.goto(url('different.html'));
+assert.equal(await page.locator('.era').count(),2);
+assert.match(await page.locator('#report-title').innerText(),/另一份/);
+assert.deepEqual(await page.evaluate(templateContract),originalTemplate,'New playlist must use the identical design and section structure');
+assert.ok(await page.locator('.insight-direction').isVisible());assert.ok(await page.locator('.insight-listen-question').isVisible());
+await page.goto(url('unknown.html'));assert.equal(await page.locator('#journey').isVisible(),true);assert.equal(await page.locator('.era').count(),0);
+assert.equal(await page.locator('#journey-nav-link').isVisible(),true);assert.equal(await page.locator('#hero-start').getAttribute('href'),'#journey');
+assert.match(await page.locator('#track-map-wrap').innerText(),/尚未确认/);
+assert.deepEqual(await page.evaluate(templateContract),originalTemplate);
 await page.goto(url('first.html'));assert.match(await page.locator('#era-1 .era-meta').innerText(),/1—6/);
 await page.goto(url('hostile.html'));assert.equal(await page.evaluate(()=>window.pwned),undefined);assert.match(await page.locator('#report-title').innerText(),/onerror/);assert.equal(await page.locator('a[href^="javascript:"]').count(),0);
 assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);console.log('Browser passed: 3 chronology modes, sticky scrolling, jumps, chart, recommendations, persisted/exported feedback, library search/sort/pagination, 4 viewports, hostile strings, default CLI artwork embedding, original design at 4 viewports, preference recommendation links and offline loading.');await browser.close();

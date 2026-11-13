@@ -4,6 +4,8 @@
 
 **获取分享链接 → 解析完整歌单 → 核对与统计 → 模型分析与推荐 → 交互网页**
 
+**固定使用当前「声迹」页面。新歌单只替换内容，页面风格、板块顺序、布局与交互保持一致。** 模板带版本与完整性校验；不为每位用户重新设计页面。
+
 支持 QQ 音乐公开歌单链接 / ID，或 QQ / Playlist Out / 规范化 JSON 与 CSV。无需音乐账号登录，不下载音频。默认只读公开元数据，分析与网页留在本地。
 
 ## 安装为 Skill
@@ -44,7 +46,7 @@ python3 skills/music-analysis/scripts/workflow.py stats work/snapshot/playlist.j
 python3 skills/music-analysis/scripts/workflow.py init-analysis work/snapshot/playlist.json --output work/analysis.json
 ```
 
-然后由 agent 结合统计与具体作品，填写 `work/analysis.json` 的偏好证据、阶段和已核实推荐；[JSON 契约](skills/music-analysis/references/analysis.md) 提供字段解释。草稿默认 `status: draft`，完成分析后才设为 `ready`。没有确认收藏顺序时保留 `order: unknown`，页面不生成时间演变。
+然后由 agent 结合统计与具体作品，填写 `work/analysis.json` 的偏好证据、阶段和已核实推荐；[JSON 契约](skills/music-analysis/references/analysis.md) 提供字段解释。草稿默认 `status: draft`，完成分析后才设为 `ready`。没有确认收藏顺序时保留 `order: unknown`，变化板块保留“待确认”状态，不编造时间演变。
 
 ```bash
 python3 skills/music-analysis/scripts/workflow.py validate work/snapshot/playlist.json work/analysis.json
@@ -68,6 +70,7 @@ python3 skills/music-analysis/scripts/workflow.py normalize '<已有导出.json�
 ## 报告功能
 
 - 封面拼贴首页、唱片式阶段配图、保留编号的偏好证据卡；使用随仓库发布的完整模板。
+- 固定保留首页、变化、偏好、推荐、曲库和页脚；缺失信息在原板块显示待补充状态。
 - 已确认顺序时：按歌单内容划分的全屏滚动章节、固定目录与当前阶段同步、曲目证据和阶段跳转；不固定阶段数。
 - 偏好：总览、详细解释、具体收藏锚点、下一步试听方向。
 - 统计：艺人参与条目、疑似版本合并两种口径，合作计数不当作风格百分比。
@@ -105,7 +108,7 @@ npx playwright install chromium
 npm run test:browser     # 离线文件与浏览器交互验证
 ```
 
-浏览器测试覆盖三种顺序状态、滚动目录与跳转、统计切换、推荐筛选、反馈持久化与导出、曲库分页/搜索/排序、不同屏宽、不可信字符串、默认命令自动内嵌封面、四种屏宽的原版字号/颜色/间距基准、偏好到推荐的跳转与生成后无外部资源加载。测试产物写入 `.test-output/`，不发布。Python 测试不需要 Node；Playwright 仅为开发依赖。
+浏览器测试覆盖三种顺序状态、滚动目录与跳转、统计切换、推荐筛选、反馈持久化与导出、曲库分页/搜索/排序、不同屏宽、不可信字符串、默认命令自动内嵌封面、四种屏宽的原版字号/颜色/间距基准、不同歌单的同模板与同板块校验、偏好到推荐的跳转与生成后无外部资源加载。测试产物写入 `.test-output/`，不发布。Python 测试不需要 Node；Playwright 仅为开发依赖。
 
 代码结构：`skills/music-analysis/scripts/` 为解析/统计/渲染，`assets/report.html` 为模板，`references/` 为方法与来源，`tests/` 为验证，`examples/` 为虚构示例。
 
