@@ -14,7 +14,7 @@ LINK_HOSTS = {
 }
 ARTWORK_HOSTS = ('qq.com', 'gtimg.cn', 'music.126.net', 'music.163.com',
                  'kgimg.com', 'kugou.com', 'kuwo.cn', 'byteimg.com',
-                 'douyinpic.com', 'douyincdn.com', 'pstatp.com', 'migu.cn')
+                 'douyinpic.com', 'douyincdn.com', 'pstatp.com', 'migu.cn', 'mzstatic.com')
 
 
 def host_matches(host, roots):

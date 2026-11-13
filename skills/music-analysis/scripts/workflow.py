@@ -16,9 +16,9 @@ import urllib.parse
 import urllib.request
 
 from analyze_playlist import analyze, credits, pick
-from covers import collect_covers, hero_indices, tls_context
+from covers import collect_covers, collect_recommendation_covers, hero_indices, selected_indices, tls_context
 from content_contract import validate_complete
-from platforms import PLATFORMS, playlist_target, playlist_url, platform_from_url, song_url
+from platforms import PLATFORMS, playlist_target, playlist_url, platform_from_url, song_url, media_url
 
 HERE = Path(__file__).resolve().parent
 
@@ -248,6 +248,18 @@ def url_ok(value):
     return url.scheme in ('http', 'https') and bool(url.hostname) and not url.username and not url.password
 
 
+def validate_artwork(art, recommendation=False):
+    if not isinstance(art, dict) or art.get('kind') not in (('album',) if recommendation else ('album', 'artist')):
+        raise ValueError('Artwork kind must identify album artwork or an explicitly labeled artist image.')
+    if not isinstance(art.get('label'), str) or not 1 <= len(art['label'].strip()) <= 100:
+        raise ValueError('Artwork needs a short verified release/artist label.')
+    if not isinstance(art.get('source'), str) or not url_ok(art['source']):
+        raise ValueError('Artwork needs a verified HTTP(S) catalog source.')
+    if not isinstance(art.get('imageUrl'), str):
+        raise ValueError('Artwork needs an imageUrl.')
+    media_url(art['imageUrl'])
+
+
 def validate_analysis(playlist, report):
     n = playlist['trackCount']
     if report.get('playlistHash') != snapshot_hash(playlist):
@@ -308,6 +320,13 @@ def validate_analysis(playlist, report):
             raise ValueError('Insight recommendationIds must refer to report recommendations (zero-based).')
     if report.get('heroAnchorIds'):
         anchors(report['heroAnchorIds'])
+    track_art = report.get('trackArtwork', {})
+    if not isinstance(track_art, dict):
+        raise ValueError('trackArtwork must map playlist indices to verified artwork.')
+    for index, art in track_art.items():
+        if not str(index).isdigit() or not 1 <= int(index) <= n:
+            raise ValueError('Artwork key must refer to this playlist.')
+        validate_artwork(art)
     stats = analyze(playlist['tracks'])
     seen_recs = set()
     for rec in report.get('recommendations', []):
@@ -317,6 +336,8 @@ def validate_analysis(playlist, report):
         if rec['tier'] not in ('大概率合口味', '相邻风格', '探索') or not url_ok(rec['source']):
             raise ValueError('Recommendation requires a known tier and a verified HTTP(S) source.')
         anchors(rec.get('anchorIds'))
+        if 'artwork' in rec:
+            validate_artwork(rec['artwork'], recommendation=True)
         rec_key = (rec['artist'].casefold(), rec['title'].casefold())
         if rec_key in seen_recs:
             raise ValueError('Duplicate recommendation in report.')
@@ -342,7 +363,7 @@ def export_files(playlist, out):
             w.writerow(["'" + x if isinstance(x, str) and x.startswith(('=', '+', '-', '@', '\t', '\r')) else x for x in values])
 
 
-def render(playlist, report, covers=None, *, preview=False):
+def render(playlist, report, covers=None, *, recommendation_covers=None, preview=False):
     stats = validate_analysis(playlist, report)
     if not preview:
         validate_complete(report)
@@ -353,13 +374,22 @@ def render(playlist, report, covers=None, *, preview=False):
         if not re.fullmatch(r'data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=\s]+', value):
             raise ValueError('Covers must be base64 JPEG, PNG or WebP data URLs.')
         embedded[str(index)] = value
+    embedded_recs = {}
+    for index, value in (recommendation_covers or {}).items():
+        if not str(index).isdigit() or not 0 <= int(index) < len(report.get('recommendations', [])):
+            raise ValueError('Recommendation cover key must refer to a recommendation (zero-based).')
+        if not report['recommendations'][int(index)].get('artwork'):
+            raise ValueError('Recommendation image needs verified artwork metadata.')
+        if not isinstance(value, str) or not re.fullmatch(r'data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=\s]+', value):
+            raise ValueError('Recommendation covers must be base64 JPEG, PNG or WebP data URLs.')
+        embedded_recs[str(index)] = value
     assets = HERE.parent / 'assets'
     template = (assets / 'report.html').read_text(encoding='utf-8')
     identity = read_json(assets / 'report-template.json')
     digest = hashlib.sha256(template.encode('utf-8')).hexdigest()
     if digest != identity['sha256']:
         raise ValueError('Report template has changed. Restore the released template; new playlists replace data only.')
-    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded,
+    bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded, recommendationCovers=embedded_recs,
                   heroIndices=hero_indices(playlist, report), templateId=identity['id'],
                   templateVersion=identity['version'], templateHash=digest, preview=preview)
     payload = json.dumps(bundle, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
@@ -384,7 +414,7 @@ def main():
         if command == 'render':
             p.add_argument('--output', type=Path, required=True); p.add_argument('--covers', type=Path)
             p.add_argument('--offline', action='store_true', help='Use only supplied / cached artwork; no network.')
-            p.add_argument('--require-covers', action='store_true', help='Fail if a chapter/hero representative image is unavailable.')
+            p.add_argument('--require-covers', action='store_true', help='Fail if any displayed collection or recommendation image is unavailable.')
             p.add_argument('--cover-cache', type=Path, help='Artwork cache (default: beside output).')
     args = parser.parse_args()
     try:
@@ -427,15 +457,23 @@ def main():
                 render(playlist, report, supplied, preview=args.preview)
                 covers, failures = collect_covers(playlist, report,
                     args.cover_cache or args.output.parent / '.music-analysis-covers', supplied, args.offline)
+                rec_covers, rec_failures = collect_recommendation_covers(report,
+                    args.cover_cache or args.output.parent / '.music-analysis-covers', args.offline)
                 required = {s.get('coverIndex') or s['anchorIds'][0] for s in report.get('stages', [])}
                 required.update(hero_indices(playlist, report))
+                if args.require_covers:
+                    required.update(selected_indices(playlist, report))
                 missing = sorted(i for i in required if str(i) not in covers)
                 if (args.require_covers or not args.preview) and missing:
                     raise ValueError(f'Representative artwork unavailable at indices {missing}. Check metadata/network or supply --covers.')
-                page = render(playlist, report, covers, preview=args.preview)
-                print(f'Artwork: {len(covers)} embedded, {len(failures)} unavailable.', file=sys.stderr)
+                if args.require_covers and rec_failures:
+                    raise ValueError('Recommendation artwork unavailable at positions ' + str([f['recommendation'] for f in rec_failures]) + '. Supply verified artwork in analysis.json (zero-based).')
+                page = render(playlist, report, covers, recommendation_covers=rec_covers, preview=args.preview)
+                print(f'Artwork: {len(covers)} collection + {len(rec_covers)} recommendation images embedded; {len(failures) + len(rec_failures)} unavailable.', file=sys.stderr)
                 if failures:
                     print('Artwork fallback: ' + '; '.join(f"#{f['index']} {f['reason']}" for f in failures[:5]), file=sys.stderr)
+                if rec_failures:
+                    print('Recommendation artwork fallback: ' + '; '.join(f"[{f['recommendation']}] {f['reason']}" for f in rec_failures[:5]), file=sys.stderr)
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 args.output.write_text(page, encoding='utf-8'); print(f'Wrote {args.output}')
     except (ValueError, KeyError, TypeError, OSError) as e:

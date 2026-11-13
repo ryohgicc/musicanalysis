@@ -13,8 +13,13 @@ assert.equal(await page.locator('.wordmark').count(),1);
 assert.match(await page.locator('#source-line').innerText(),/预览.*未完成/);
 assert.equal(await page.locator('.float-album img').count(),4);
 assert.equal(await page.locator('.era-cover img').count(),3);
-assert.equal(await page.locator('.insight-proof-song img').count(),0);
+assert.equal(await page.locator('.insight-proof-song img').count(),2);
 assert.equal(await page.locator('.insight-proof-number').count(),2);
+assert.equal(await page.locator('.rec-art img').count(),1);
+assert.equal(await page.locator('.evidence-song .song-thumb img').count(),6);
+assert.match(await page.locator('#era-1 .artwork-note').innerText(),/艺人图.*原条目无专辑封面/);
+assert.match(await page.locator('#era-1 .song-thumb img').last().getAttribute('alt'),/艺人图片/);
+assert.equal(await page.locator('.rec-title .artwork-note a').getAttribute('href'),'https://music.apple.com/album/fixture');
 assert.ok(await page.locator('img').evaluateAll(imgs=>imgs.length>0&&imgs.every(i=>i.complete&&i.naturalWidth>0&&i.src.startsWith('data:image/'))),'default CLI must produce decoded offline cover images');
 // Preserve the original report's design across different playlist contents.
 const design=JSON.parse(await fs.readFile(path.join(root,'tests/design-baseline.json'),'utf8'));
@@ -59,7 +64,18 @@ assert.match(await page.locator('#track-map-wrap').innerText(),/尚未确认/);
 assert.deepEqual(await page.evaluate(templateContract),originalTemplate);
 await page.goto(url('complete.html'));
 assert.equal(await page.locator('.era').count(),9);assert.equal(await page.locator('.taste-preview').count(),6);assert.equal(await page.locator('.rec-card').count(),12);
-assert.equal(await page.locator('.era-cover img').count(),9);assert.equal(await page.locator('.insight-proof-song').count(),18);
+assert.equal(await page.locator('.era-cover img').count(),9);
+assert.equal(await page.locator('.evidence-song .song-thumb img').count(),27);
+assert.equal(await page.locator('.insight-proof-thumb img').count(),18);
+assert.equal(await page.locator('.rec-art img').count(),12);
+for(const v of [{width:1440,height:900},{width:390,height:844},{width:320,height:740}]){
+  await page.setViewportSize(v);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  assert.ok(await page.locator('.insight-proof-thumb img,.rec-art img,.song-thumb img').evaluateAll(imgs=>imgs.every(img=>{
+    const b=img.getBoundingClientRect();return img.complete&&img.naturalWidth>0&&b.width>=35&&Math.abs(b.width-b.height)<1;
+  })));
+}
+await page.setViewportSize({width:1440,height:900});assert.equal(await page.locator('.insight-proof-song').count(),18);
 assert.equal(await page.locator('[data-tier="大概率合口味"] .count').innerText(),'6');assert.equal(await page.locator('[data-tier="相邻风格"] .count').innerText(),'4');assert.equal(await page.locator('[data-tier="探索"] .count').innerText(),'2');
 assert.match(await page.locator('#order-note').innerText(),/不解释为.*时间演变/);assert.match(await page.locator('.era-boundary').first().innerText(),/不代表时间先后/);
 assert.ok(!(await page.locator('#source-line').innerText()).includes('预览'));

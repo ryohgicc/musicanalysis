@@ -4,7 +4,7 @@
 
 **[在线体验原版 Demo →](https://ryohgicc.github.io/musicanalysis/)** · **[体验全屏动效版 →](https://ryohgicc.github.io/musicanalysis/apple-motion-report/)**
 
-动效版是一份独立预览：自然滚动切换 24 个场景，阶段故事与证据直接展开，桌面阶段页按整屏高度分布标题、故事、封面与证据，九个阶段的 27 首线索歌曲、偏好证据和 12 首推荐都显示图片（含现场版本）。《夜に駆ける》原条目无专辑封面，使用对应艺人图片并标注。移除底部导航，并提供阅读模式。正式 skill 仍使用原来的固定模板。
+动效版是一份独立预览：自然滚动切换 24 个场景，阶段故事与证据直接展开，桌面阶段页按整屏高度分布标题、故事、封面与证据，九个阶段的 27 首线索歌曲、偏好证据和 12 首推荐都显示图片（含现场版本）。《夜に駆ける》原条目无专辑封面，使用对应艺人图片并标注。移除底部导航，并提供阅读模式。正式 skill 沿用固定「声迹」布局，v0.5.0 同步了证据与推荐图片显示、离线缓存和缺图检查。
 
 ## 有哪些功能
 
@@ -156,9 +156,11 @@ python3 skills/music-analysis/scripts/workflow.py fetch '<歌单ID>' --platform 
 | `render --offline` | 只用已缓存或显式提供的图片 |
 | `render --cover-cache <目录>` | 指定封面缓存；默认在输出旁的 `.music-analysis-covers/` |
 | `render --covers covers.json` | 显式提供图片，格式为 `{ "曲目编号": "data:image/jpeg;base64,..." }` |
-| `render --require-covers` | 代表封面缺失时停止；正式报告默认也要求首页与阶段代表封面齐全 |
+| `render --require-covers` | 所有选定收藏图与推荐图缺失时停止；不加此参数时，正式报告仍要求首页与阶段代表封面齐全 |
 
-渲染默认从各平台元数据获取最多 96 个代表与证据封面，缓存后内嵌。仅 QQ 支持按歌曲 MID 补查专辑；其他平台不会借用 QQ 图片。次要证据图片缺失时会报告并使用几何占位。
+渲染默认从各平台元数据获取最多 96 个代表与证据封面，缓存后内嵌；阶段歌曲、偏好证据与推荐卡片直接显示图片。仅 QQ 支持按歌曲 MID 补查专辑。推荐图片需由 Agent 核对具体发行后填写 `recommendations[].artwork`（`kind: album`、`label`、`source`、`imageUrl`），脚本下载并缓存，支持六平台 CDN 与 Apple 目录的图片 CDN。不会自动把收藏图片当成推荐图片，也没有接入 Apple Music 歌单解析。
+
+原条目没有专辑封面时，可在 `trackArtwork` 按曲目编号填写已核实的同一艺人图片，使用 `kind: artist`，页面会标注“艺人图 · 原条目无专辑封面”及来源。数据示例见 [图片与发行版本](skills/music-analysis/references/analysis.md#图片与发行版本)。旧分析未填写推荐图片时，普通 `render` 会报告缺项，卡片显示“封面暂缺”；标准 skill 使用 `--require-covers`，补齐后才交付带图报告。
 
 本地 CSV 支持 Playlist Out 的 `url` / `duration` 字段，本项目导出另保留 `songId` / `coverUrl`。JSON 更适合保留完整艺人数组和歌单信息。
 

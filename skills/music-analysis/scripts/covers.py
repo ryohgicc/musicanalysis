@@ -41,7 +41,7 @@ def open_source(request):
 
 def download(url):
     url = media_url(url)
-    headers = {'User-Agent': 'MusicAnalysis/0.4'}
+    headers = {'User-Agent': 'MusicAnalysis/0.5'}
     if qq_host(url):
         headers['Referer'] = 'https://y.qq.com/'
     request = urllib.request.Request(url, headers=headers)
@@ -85,6 +85,38 @@ def selected_indices(playlist, report):
     return list(dict.fromkeys(indices))[:96]
 
 
+def cached_image(url, cache, offline):
+    url = media_url(url)
+    path = cache / (hashlib.sha256(url.encode()).hexdigest() + '.image')
+    if path.exists():
+        try:
+            return data_url(path.read_bytes())
+        except ValueError:
+            pass
+    if offline:
+        raise ValueError('not cached (offline)')
+    raw = download(url)
+    result = data_url(raw)
+    path.write_bytes(raw)
+    return result
+
+
+def collect_recommendation_covers(report, cache_dir, offline=False):
+    """Use human-verified release artwork, never substitute a collection anchor."""
+    cache = Path(cache_dir)
+    cache.mkdir(parents=True, exist_ok=True)
+    covers, failures = {}, []
+    for i, rec in enumerate(report.get('recommendations', [])):
+        art = rec.get('artwork')
+        try:
+            if not art:
+                raise ValueError('No verified recommendation artwork.')
+            covers[str(i)] = cached_image(art['imageUrl'], cache, offline)
+        except (OSError, ValueError) as error:
+            failures.append({'recommendation': i, 'reason': str(error)[:140]})
+    return covers, failures
+
+
 def collect_covers(playlist, report, cache_dir, supplied=None, offline=False):
     """Return embedded images plus failures. Cache is URL/MID keyed, never index keyed."""
     cache = Path(cache_dir)
@@ -96,7 +128,7 @@ def collect_covers(playlist, report, cache_dir, supplied=None, offline=False):
     groups = {}
     for i in indices:
         t = by_id[i]
-        identity = t.get('coverUrl') or ('mid:' + t['songMid'] if t.get('songMid') else '')
+        identity = report.get('trackArtwork', {}).get(str(i), {}).get('imageUrl') or t.get('coverUrl') or ('mid:' + t['songMid'] if t.get('songMid') else '')
         if identity:
             groups.setdefault(identity, []).append(i)
     def fetch(item):
@@ -141,5 +173,6 @@ def collect_covers(playlist, report, cache_dir, supplied=None, offline=False):
             else:
                 failures.extend({'index': i, 'reason': error} for i in ids)
     failures.extend({'index': i, 'reason': 'No artwork URL or QQ song MID in metadata.'}
-                    for i in indices if not by_id[i].get('coverUrl') and not by_id[i].get('songMid'))
+                    for i in indices if not by_id[i].get('coverUrl') and not by_id[i].get('songMid')
+                    and not report.get('trackArtwork', {}).get(str(i), {}).get('imageUrl'))
     return result, failures
