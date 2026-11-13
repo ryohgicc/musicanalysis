@@ -31,13 +31,22 @@ try{
   await page.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
   assert.ok(await page.locator('#preference-groove .proof-thumb img').count()===3);
   assert.equal(await page.locator('.rec-art img').count(),12);
+  assert.equal(await page.locator('.stage-track .stage-thumb img').count(),27);
+  assert.equal(data.artworkNotes['474'].kind,'artist');
+  assert.equal(await page.locator('[data-track="474"] .art-note').textContent(),'艺人图');
+  assert.match(await page.locator('[data-track="474"] img').getAttribute('alt'),/原条目无专辑封面/);
   assert.equal(data.recommendationArtwork['9'].title,'My Jinji (Audiotree Live)');
   for(const [i,r] of data.recommendations.entries())assert.equal(await page.locator(`#recommendation-${i} .rec-art img`).getAttribute('alt'),`${r.artist}《${r.title}》封面`);
   assert.ok(await page.locator('img').evaluateAll(imgs=>imgs.every(i=>i.src.startsWith('data:image/'))));
   for(const [i,stage] of data.stages.entries()){
     const body=await page.locator(`#era-${i+1}`).textContent();
     assert.ok(body.includes(stage.body));
-    for(const id of stage.ids)assert.ok(body.includes('#'+id));
+    for(const id of stage.ids){
+      assert.ok(body.includes('#'+id));
+      const row=page.locator(`#era-${i+1} [data-track="${id}"]`);
+      assert.equal(await row.locator('img').getAttribute('src'),data.covers[id]);
+      assert.equal(await row.locator('h3 a').getAttribute('href'),data.playlist.tracks.find(t=>t.index===id).sourceUrl);
+    }
     assert.equal(await page.locator(`#era-${i+1} [data-detail^="stage:"]`).count(),0);
   }
   async function go(i){
@@ -53,6 +62,18 @@ try{
       const box=await page.locator('.panel-inner').nth(i).boundingBox();
       assert.ok(box.y+box.height<=viewport.height+2,`Unreadable scene ${i} at ${viewport.width}px`);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      if(i>=2&&i<=10){
+        const thumbnails=await page.locator('.panel').nth(i).locator('.stage-track').evaluateAll(rows=>rows.every(row=>{
+          const image=row.querySelector('img'),art=image.getBoundingClientRect(),text=row.querySelector('h3').getBoundingClientRect(),bounds=row.getBoundingClientRect();
+          return image.complete&&image.naturalWidth>0&&art.width>=40&&Math.abs(art.width-art.height)<1&&text.left>=art.right&&art.left>=bounds.left&&art.right<=bounds.right;
+        }));
+        assert.ok(thumbnails,`Stage ${i} thumbnails must fit beside the song text at ${viewport.width}px`);
+        const recordFits=await page.locator('.panel').nth(i).evaluate(el=>{
+          const image=el.querySelector('.record-cover img'),cover=el.querySelector('.record-cover').getBoundingClientRect(),evidence=el.querySelector('.stage-evidence').getBoundingClientRect(),style=getComputedStyle(image);
+          return Math.abs(parseFloat(style.width)-parseFloat(style.height))<1&&cover.bottom<=evidence.top;
+        });
+        assert.ok(recordFits,`Stage ${i} record must stay square and clear of the evidence at ${viewport.width}px`);
+      }
     }
   }
   for(const viewport of [{width:1920,height:1080},{width:1440,height:960},{width:1280,height:720}]){
