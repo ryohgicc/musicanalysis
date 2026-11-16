@@ -62,3 +62,8 @@ external_report=copy.deepcopy(full_report);external_report['playlistHash']=snaps
 save_json(root/'external-playlist.json',external);save_json(root/'external-analysis.json',external_report)
 with patch('sys.argv',['workflow.py','render',str(root/'external-playlist.json'),str(root/'external-analysis.json'),'--output',str(root/'external.html')]),patch('covers.open_source',side_effect=lambda *a,**k:io.BytesIO(synthetic_png(2))),contextlib.redirect_stdout(io.StringIO()):
     main()
+
+# Keep the final-scene overflow regression independent of content-contract limits.
+last_html=(root/'complete.html').read_text()
+last_html=last_html.replace('</style>', '.closing .panel-inner{padding-bottom:1200px}</style>')
+(root/'last-long.html').write_text(last_html,encoding='utf-8')
