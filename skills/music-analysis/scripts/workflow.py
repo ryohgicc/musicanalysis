@@ -389,11 +389,14 @@ def render(playlist, report, covers=None, *, recommendation_covers=None, preview
     digest = hashlib.sha256(template.encode('utf-8')).hexdigest()
     if digest != identity['sha256']:
         raise ValueError('Report template has changed. Restore the released template; new playlists replace data only.')
+    screenshot_engine = (assets / 'html2canvas.min.js').read_text(encoding='utf-8')
+    if hashlib.sha256(screenshot_engine.encode('utf-8')).hexdigest() != identity['screenshotEngineSha256']:
+        raise ValueError('Screenshot engine has changed. Restore the released skill assets.')
     bundle = dict(playlist=playlist, report=report, stats=stats, covers=embedded, recommendationCovers=embedded_recs,
                   heroIndices=hero_indices(playlist, report), templateId=identity['id'],
                   templateVersion=identity['version'], templateHash=digest, preview=preview)
     payload = json.dumps(bundle, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
-    return template.replace('__DOCUMENT_TITLE__', html.escape(report['title'])).replace('/*__REPORT_DATA__*/', payload)
+    return template.replace('__DOCUMENT_TITLE__', html.escape(report['title'])).replace('/*__REPORT_DATA__*/', payload).replace('/*__SCREENSHOT_ENGINE__*/', screenshot_engine)
 
 
 def main():

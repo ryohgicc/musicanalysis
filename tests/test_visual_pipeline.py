@@ -16,6 +16,18 @@ from covers import collect_covers, collect_recommendation_covers, selected_indic
 PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jM9kAAAAASUVORK5CYII=')
 
 class VisualPipelineTest(unittest.TestCase):
+    def test_screenshot_engine_integrity(self):
+        import hashlib
+        p,r=fixture()
+        assets=Path(__file__).resolve().parents[1]/'skills/music-analysis/assets'
+        identity=json.loads((assets/'report-template.json').read_text())
+        self.assertEqual(hashlib.sha256((assets/'html2canvas.min.js').read_bytes()).hexdigest(),identity['screenshotEngineSha256'])
+        page=render(p,r,preview=True)
+        self.assertIn('html2canvas 1.4.1',page)
+        self.assertNotIn('/*__SCREENSHOT_ENGINE__*/',page)
+        with patch('workflow.read_json',return_value={**identity,'screenshotEngineSha256':'invalid'}),self.assertRaisesRegex(ValueError,'Screenshot engine has changed'):
+            render(p,r,preview=True)
+
     def test_default_render_embeds_available_covers(self):
         playlist,report=complete_fixture()
         for track in playlist['tracks']:

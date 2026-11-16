@@ -1,5 +1,6 @@
 {
   "id": "shengji",
-  "version": "0.6.0",
-  "sha256": "951849e65da4117af70721ba83d49cfbfd8edd39c0583dfc15b7801ba1455fc4"
+  "version": "0.7.0",
+  "sha256": "28924ee3ac1470459377631f7473ba233db5872fa1ca64a7737f08f039f62cf2",
+  "screenshotEngineSha256": "e87e550794322e574a1fda0c1549a3c70dae5a93d9113417a429016838eab8cb"
 }
