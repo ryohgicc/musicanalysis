@@ -85,13 +85,14 @@ dialog{border:1px solid #ddd;border-radius:24px;background:#fafbf6;color:var(--i
 .source-line{font-size:11px;line-height:1.8;margin-top:22px;color:var(--blue)}.floating-cover figcaption{overflow-wrap:anywhere}.proof-top h3,.rec-title>div{min-width:0;overflow-wrap:anywhere}.proof-top small{max-width:140px}.art-note{font-size:9px;line-height:1.6}.record-cover .art-note{display:block}.dialog-body{overflow-wrap:anywhere}@media print{.panel-inner{transform:none!important}}
 
 .topbar .topnav{margin-left:auto}.topbar #mode{margin-left:0}#image-export .dialog-body>p+p{margin-top:14px}#export-status{margin:20px 0 12px;font-size:13px;color:var(--blue)}#export-progress{width:100%;height:8px;accent-color:var(--blue);margin-bottom:18px}#export-preview img{display:block;width:100%;height:260px;object-fit:contain;background:#e8e9e2;border:1px solid var(--line);border-radius:10px}#export-size{margin-top:10px}#image-export #start-export{margin-top:22px}#image-export [hidden]{display:none!important}@media(max-width:760px){.topbar{gap:8px;padding-left:16px;padding-right:16px}.topbar #export-image{margin-left:auto}.topbar .mode{padding:8px;font-size:9px}.topbar .brand{gap:7px}.topbar .brand svg{width:20px}.research-mark{display:none}}
+.export-quality{display:flex;align-items:center;gap:14px;font-size:12px;margin-top:20px}.export-quality select{min-width:0;padding:9px;border:1px solid var(--line);border-radius:8px;background:white}#export-parts{display:grid;gap:10px;margin-top:18px}.export-part{display:flex;align-items:center;gap:16px;font-size:12px;padding:12px;background:#ecefe5;border-radius:9px}.export-part span{flex:1;min-width:0}.export-part a{color:var(--blue);white-space:nowrap}
 </style></head><body>
 <a class="skip" href="#journey">跳到收藏旅程</a>
 <header class="topbar"><a class="brand" href="#home" aria-label="声迹 首页"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M4 14v4M10 8v16M16 3v26M22 8v16M28 14v4"/></svg>声迹<span class="research-mark">LISTENING REPORT</span></a><nav class="topnav" aria-label="报告导航"><a href="#journey" data-group="journey">旅程</a><a href="#preferences" data-group="preferences">偏好</a><a href="#discover" data-group="discover">发现</a><a href="#library" data-group="library">曲库</a></nav><button class="mode" id="export-image" aria-haspopup="dialog">导出长截图</button><button class="mode" id="mode" aria-pressed="false">阅读模式</button><button class="menu-trigger" id="menu-trigger" aria-label="打开报告目录" aria-expanded="false">☰</button></header>
 <nav class="menu" id="menu" aria-label="章节目录" hidden></nav>
 <main id="main"><div class="runway" id="runway"><div class="viewport" id="viewport"></div></div></main>
 <dialog id="detail"><div class="dialog-bar"><span>FOLLOW THE MUSIC / 细细读</span><button id="close-detail" aria-label="关闭详情">×</button></div><div class="dialog-body" id="detail-body"></div></dialog>
-<dialog id="image-export" aria-labelledby="export-title"><div class="dialog-bar"><span id="export-title">导出长截图</span><button id="close-export" aria-label="关闭截图导出">×</button></div><div class="dialog-body"><p>按报告顺序展开所有章节，保留文字、封面和试听反馈。曲库截取当前筛选和分页，详情弹窗中的内容不包含在截图中。</p><p class="small">导出使用统一宽度排版，长图会按浏览器可用尺寸缩放。手机可打开图片后长按保存。</p><p id="export-status" role="status" aria-live="polite"></p><progress id="export-progress" max="1" value="0" aria-label="长截图生成进度" hidden></progress><div id="export-result" hidden><div id="export-preview"></div><p class="small" id="export-size"></p><div class="actions"><a class="button" id="download-image">下载 PNG ↓</a><a class="button secondary" id="open-image" target="_blank" rel="noopener">打开图片 ↗</a></div></div><button class="button" id="start-export">生成长截图</button></div></dialog>
+<dialog id="image-export" aria-labelledby="export-title"><div class="dialog-bar"><span id="export-title">导出长截图</span><button id="close-export" aria-label="关闭截图导出">×</button></div><div class="dialog-body"><p>按报告顺序展开所有章节，保留文字、封面和试听反馈。曲库截取当前筛选和分页，详情弹窗中的内容不包含在截图中。</p><p class="small">默认 2 倍高清（2160 像素宽），可选 3 倍超清。高清图过长时按完整章节分段，保留文字清晰度；需要一张整图可选“整张长图”。手机可打开图片后长按保存。</p><label class="export-quality" for="export-quality">清晰度<select id="export-quality"><option value="2" selected>2 倍高清 · 2160 px</option><option value="3">3 倍超清 · 3240 px</option><option value="fit">整张长图 · 自动适配</option></select></label><p id="export-status" role="status" aria-live="polite"></p><progress id="export-progress" max="1" value="0" aria-label="长截图生成进度" hidden></progress><div id="export-result" hidden><div id="export-preview"></div><div id="export-parts"></div><p class="small" id="export-size"></p><div class="actions"><a class="button" id="download-image">下载 PNG ↓</a><a class="button secondary" id="open-image" target="_blank" rel="noopener">打开图片 ↗</a></div></div><button class="button" id="start-export">生成长截图</button></div></dialog>
 <noscript><p class="noscript">请启用 JavaScript 阅读交互报告。</p></noscript>
 <script>/*__SCREENSHOT_ENGINE__*/</script>
 <script type="application/json" id="report-data">/*__REPORT_DATA__*/</script>
@@ -201,8 +202,8 @@ addEventListener('scroll',schedule,{passive:true});
 let resizeFrame;addEventListener('resize',()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>{const i=current;measure();if(!reading)go(i,false);schedule();});});
 // Render scenes separately in a detached reading layout to bound canvas memory.
 const exportDialog=$('#image-export'),exportTrigger=$('#export-image'),exportStart=$('#start-export');
-let exportBusy=false,exportCancelled=false,exportURL=null,exportFocus=null;
-function releaseExport(){if(exportURL){URL.revokeObjectURL(exportURL);exportURL=null;}$('#export-preview').replaceChildren();$('#download-image').removeAttribute('href');$('#open-image').removeAttribute('href');$('#export-result').hidden=true;}
+let exportBusy=false,exportCancelled=false,exportURLs=[],exportFocus=null;
+function releaseExport(){exportURLs.forEach(url=>URL.revokeObjectURL(url));exportURLs=[];$('#export-preview').replaceChildren();$('#export-parts').replaceChildren();$('#download-image').removeAttribute('href');$('#open-image').removeAttribute('href');$('#export-result').hidden=true;}
 function exportStatus(message){$('#export-status').textContent=message;}
 exportTrigger.onclick=()=>{exportFocus=document.activeElement;exportDialog.showModal();$('#start-export').focus();};
 $('#close-export').onclick=()=>exportDialog.close();
@@ -211,7 +212,7 @@ function canvasBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b
 function allocateExportCanvas(width,height){const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw Error('浏览器不支持图片画布。');ctx.fillStyle='#f7f5ef';ctx.fillRect(0,0,width,height);ctx.fillStyle='#3357ff';ctx.fillRect(width-1,height-1,1,1);if(ctx.getImageData(width-1,height-1,1,1).data[2]!==255)throw Error('浏览器图片尺寸不足。');return canvas;}
 exportStart.onclick=async()=>{
  if(exportBusy)return;
- exportBusy=true;exportCancelled=false;exportStart.disabled=true;exportTrigger.disabled=true;releaseExport();
+ exportBusy=true;exportCancelled=false;exportStart.disabled=true;exportTrigger.disabled=true;$('#export-quality').disabled=true;releaseExport();
  const progress=$('#export-progress');progress.hidden=false;progress.value=0;exportStatus('正在准备报告与封面…');
  let frame,output;
  try{
@@ -231,28 +232,44 @@ exportStart.onclick=async()=>{
   copies.forEach(copy=>copy.querySelectorAll('.rec-card').forEach(card=>{const i=+card.id.split('-').at(-1),value=feedback[feedbackKey(i)];if(value){const label=doc.createElement('p');label.className='capture-note';label.textContent='试听反馈：'+feedbackLabels[value];card.append(label);}}));
   await doc.fonts.ready;await Promise.all([...doc.images].map(img=>img.decode().catch(()=>{throw Error('封面未能解码，请重新打开报告后重试。');})));
   const heights=copies.map(el=>Math.ceil(el.getBoundingClientRect().height)),total=heights.reduce((a,b)=>a+b,0);
-  // Stay below conservative browser canvas limits, including mobile Safari.
-  let scale=Math.min(1,15000/total,Math.sqrt(12000000/(width*total)));
-  for(let attempt=0;attempt<3;attempt++){
-   try{output=allocateExportCanvas(Math.max(1,Math.floor(width*scale)),Math.ceil(total*scale));break;}catch(error){if(attempt===2)throw error;scale*=.7;}
-  }
-  const ctx=output.getContext('2d');let y=0;progress.max=copies.length;
+  const quality=$('#export-quality').value,scale=quality==='fit'?Math.min(1,14900/total,Math.sqrt(11900000/(width*total))):Number(quality);
+  const pixelWidth=Math.floor(width*scale),limit=Math.min(15000,Math.floor((quality==='fit'?12000000:24000000)/pixelWidth)),groups=[];
+  let group={first:0,last:0,height:0};
   for(let i=0;i<copies.length;i++){
-   if(exportCancelled)throw Error('已取消导出，可重新生成。');
-   exportStatus(`正在生成 ${i+1} / ${copies.length}：${panels[i].label}`);
-   const part=await html2canvas(copies[i],{backgroundColor:null,scale:Math.min(1,scale*1.5),logging:false,useCORS:false,allowTaint:false,windowWidth:width,windowHeight:captureHeight,scrollX:0,scrollY:0});
-   const end=Math.ceil((y+heights[i])*scale),start=Math.ceil(y*scale);
-   ctx.drawImage(part,0,start,output.width,end-start);part.width=0;part.height=0;y+=heights[i];progress.value=i+1;
-   await new Promise(resolve=>setTimeout(resolve,0));
+   const h=Math.ceil(heights[i]*scale);
+   if(group.height&&group.height+h>limit){groups.push(group);group={first:i,last:i,height:0};}
+   group.last=i;group.height+=h;
   }
-  if(exportCancelled)throw Error('已取消导出，可重新生成。');
-  const blob=await canvasBlob(output);if(exportCancelled)throw Error('已取消导出，可重新生成。');
-  exportURL=URL.createObjectURL(blob);const preview=document.createElement('img');preview.alt='完整报告长截图预览';preview.src=exportURL;$('#export-preview').replaceChildren(preview);$('#download-image').href=exportURL;$('#open-image').href=exportURL;
-  $('#download-image').download=`${R.title.replace(/[\\/:*?"<>|\u0000-\u001f]/g,'-')||'声迹'}-长截图.png`;
-  $('#export-size').textContent=`${output.width} × ${output.height} 像素 · ${copies.length} 个页面${scale<.99?' · 已适配长图尺寸':''}`;
+  if(group.height)groups.push(group);
+  progress.max=copies.length;let done=0;const results=[];
+  const filename=`${R.title.replace(/[\\/:*?"<>|\u0000-\u001f]/g,'-')||'声迹'}-长截图`;
+  async function captureGroup(g){
+   if(exportCancelled)throw Error('已取消导出，可重新生成。');
+   try{output=allocateExportCanvas(pixelWidth,g.height);}catch(error){
+    if(output){output.width=0;output.height=0;output=null;}
+    if(g.first===g.last)throw Error('当前设备无法生成此清晰度，请选择较低档位重试。');
+    const mid=Math.floor((g.first+g.last)/2),leftHeight=heights.slice(g.first,mid+1).reduce((sum,h)=>sum+Math.ceil(h*scale),0);
+    await captureGroup({first:g.first,last:mid,height:leftHeight});await captureGroup({first:mid+1,last:g.last,height:g.height-leftHeight});return;
+   }
+   const ctx=output.getContext('2d');let y=0;
+   for(let i=g.first;i<=g.last;i++){
+    if(exportCancelled)throw Error('已取消导出，可重新生成。');
+    exportStatus(`正在生成 ${i+1} / ${copies.length}：${panels[i].label}`);
+    const part=await html2canvas(copies[i],{backgroundColor:null,scale,logging:false,useCORS:false,allowTaint:false,windowWidth:width,windowHeight:captureHeight,scrollX:0,scrollY:0});
+    const h=Math.ceil(heights[i]*scale);ctx.drawImage(part,0,y,pixelWidth,h);part.width=0;part.height=0;y+=h;progress.value=++done;
+    await new Promise(resolve=>setTimeout(resolve,0));
+   }
+   const blob=await canvasBlob(output);if(exportCancelled)throw Error('已取消导出，可重新生成。');
+   const url=URL.createObjectURL(blob);exportURLs.push(url);results.push({...g,url});output.width=0;output.height=0;output=null;
+  }
+  for(const g of groups)await captureGroup(g);
+  const first=results[0],preview=document.createElement('img');preview.alt='报告长截图预览 · 第 1 段';preview.src=first.url;$('#export-preview').replaceChildren(preview);$('#download-image').href=first.url;$('#open-image').href=first.url;
+  $('#download-image').download=`${filename}${results.length>1?'-01':''}.png`;$('#download-image').textContent=results.length>1?'下载第 1 段 ↓':'下载 PNG ↓';
+  $('#export-size').textContent=`${pixelWidth} 像素宽 · ${copies.length} 个页面 · ${results.length} 张${quality==='fit'?'整图':` · ${scale} 倍清晰度`}`;
+  if(results.length>1)$('#export-parts').innerHTML=results.map((r,i)=>`<div class="export-part"><span>第 ${i+1} / ${results.length} 段 · ${pixelWidth} × ${r.height} px<br>${esc(panels[r.first].label)} → ${esc(panels[r.last].label)}</span><a href="${r.url}" download="${esc(filename)}-${String(i+1).padStart(2,'0')}.png">下载</a><a href="${r.url}" target="_blank" rel="noopener">打开</a></div>`).join('');
   $('#export-result').hidden=false;exportStatus('长截图已生成，可以下载或打开图片保存。');exportStart.textContent='重新生成';
  }catch(error){releaseExport();exportStatus(`生成未完成：${error.message||'请重试。'}`);}
- finally{frame?.remove();if(output){output.width=0;output.height=0;}progress.hidden=true;exportBusy=false;exportStart.disabled=false;exportTrigger.disabled=false;}
+ finally{frame?.remove();if(output){output.width=0;output.height=0;}progress.hidden=true;exportBusy=false;exportStart.disabled=false;exportTrigger.disabled=false;$('#export-quality').disabled=false;}
 };
 addEventListener('pagehide',releaseExport);
 // Expose only read-only diagnostics for inspection of scroll behavior.

@@ -62,7 +62,7 @@ try{
   if(file==='external.html'){assert.equal(await page.locator('a[href*="qq.com"]').count(),0);await go('library');assert.equal(await page.locator('#library-rows a[href^="https://music.163.com/"]').count(),6);}
  }
  await load('complete.html');const d=JSON.parse(await page.locator('#report-data').textContent());
- assert.equal(d.templateVersion,'0.7.0');assert.equal(await page.locator('.panel').count(),24);
+ assert.equal(d.templateVersion,'0.7.1');assert.equal(await page.locator('.panel').count(),24);
  assert.equal(await page.locator('.era').count(),9);assert.equal(await page.locator('.thread-card').count(),6);assert.equal(await page.locator('.insight').count(),6);
  assert.equal(await page.locator('.stage-thumb img').count(),27);assert.equal(await page.locator('.insight .proof-thumb img').count(),18);assert.equal(await page.locator('.rec-art img').count(),12);
  assert.equal(await page.locator('#discover .rec-card').count(),6);assert.equal(await page.locator('#discover-adjacent .rec-card').count(),4);assert.equal(await page.locator('#discover-explore .rec-card').count(),2);

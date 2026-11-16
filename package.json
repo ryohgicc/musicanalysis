@@ -1,6 +1,6 @@
 {
   "name": "musicanalysis",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Evidence-based playlist analysis skill and offline listening reports",
   "scripts": {
